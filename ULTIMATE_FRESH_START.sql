@@ -353,14 +353,33 @@ do $$ begin
 end $$;
 
 -- 6. FUNCTIONS & TRIGGERS
+
+-- DANGER ZONE: Clean up ALL existing triggers on auth.users to prevent conflicts
+DO $$
+DECLARE
+    trig_record RECORD;
+BEGIN
+    FOR trig_record IN 
+        SELECT trigger_name, event_object_table
+        FROM information_schema.triggers 
+        WHERE event_object_schema = 'auth' 
+          AND event_object_table = 'users'
+    LOOP
+        EXECUTE 'DROP TRIGGER IF EXISTS ' || trig_record.trigger_name || ' ON auth.users';
+    END LOOP;
+END $$;
+
 create or replace function public.handle_new_user()
 returns trigger as $$
 declare
   is_admin boolean;
+  meta_level text;
 begin
-  is_admin := (new.email = 'eiadmokhtar67@gmail.com');
+  -- Debug Check: If you see this in the error message, this is the CORRECT trigger running.
+  is_admin := (lower(new.email) = 'eiadmokhtar67@gmail.com');
+  meta_level := new.raw_user_meta_data->>'level';
 
-  -- 1. Create Profile
+  -- 1. Create/Update Profile
   insert into public.profiles (
     id, 
     full_name, 
@@ -376,7 +395,10 @@ begin
     coalesce(new.raw_user_meta_data->>'full_name', 'User'), 
     new.raw_user_meta_data->>'avatar_url', 
     case when is_admin then 'admin'::app_role else 'learner'::app_role end,
-    coalesce((new.raw_user_meta_data->>'level')::user_level, 'Beginner'::user_level),
+    case 
+      when meta_level is null or meta_level = '' then 'Beginner'::user_level 
+      else meta_level::user_level 
+    end,
     new.raw_user_meta_data->>'governorate',
     new.raw_user_meta_data->>'membership_number',
     case when is_admin then 'approved' else 'pending' end
@@ -397,6 +419,8 @@ begin
   end if;
 
   return new;
+exception when others then
+  raise exception '[TAJAWAL_TRIGGER_ERROR] Error in handle_new_user: %', sqlerrm;
 end;
 $$ language plpgsql security definer;
 
@@ -434,7 +458,7 @@ create trigger on_task_created
   after insert on public.tasks
   for each row execute procedure public.notify_new_task();
 
-drop trigger if exists on_auth_user_created on auth.users;
+-- Re-create the sign-up trigger
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
@@ -445,9 +469,13 @@ DECLARE
   new_user_uuid UUID := extensions.uuid_generate_v4();
   user_email TEXT := 'eiadmokhtar67@gmail.com';
   user_password TEXT := 'dida3/2/2001#';
+  target_id UUID;
 BEGIN
-  -- Insert into auth.users if not exists
-  IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = user_email) THEN
+  -- 1. Check if user exists
+  SELECT id INTO target_id FROM auth.users WHERE email = user_email;
+
+  IF target_id IS NULL THEN
+    -- Create new admin
     INSERT INTO auth.users (
       instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, 
       last_sign_in_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
@@ -459,30 +487,29 @@ BEGIN
       now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Eiad Mokhtar Admin"}',
       now(), now(), '', '', '', ''
     );
-    
-    -- Ensure profile status is 'approved' and role is 'admin'
-    INSERT INTO public.profiles (id, full_name, role, status)
-    VALUES (new_user_uuid, 'Eiad Mokhtar Admin', 'admin', 'approved')
-    ON CONFLICT (id) DO UPDATE SET role = 'admin', status = 'approved';
-
-    -- Crucial: Insert into user_roles
-    INSERT INTO public.user_roles (user_id, role)
-    VALUES (new_user_uuid, 'admin')
-    ON CONFLICT DO NOTHING;
-
-    RAISE NOTICE 'Admin user created and promoted successfully.';
+    target_id := new_user_uuid;
+    RAISE NOTICE 'Admin user created successfully.';
   ELSE
-    -- Re-ensure permissions for existing user
-    SELECT id INTO new_user_uuid FROM auth.users WHERE email = user_email;
-    
-    UPDATE public.profiles SET role = 'admin', status = 'approved' WHERE id = new_user_uuid;
-    
-    INSERT INTO public.user_roles (user_id, role)
-    VALUES (new_user_uuid, 'admin')
-    ON CONFLICT DO NOTHING;
-    
-    RAISE NOTICE 'Admin permissions verified for existing account.';
+    -- Force confirm and reset existing admin
+    UPDATE auth.users 
+    SET 
+      encrypted_password = extensions.crypt(user_password, extensions.gen_salt('bf')),
+      email_confirmed_at = now(),
+      updated_at = now(),
+      raw_app_meta_data = '{"provider":"email","providers":["email"]}',
+      raw_user_meta_data = '{"full_name":"Eiad Mokhtar Admin"}'
+    WHERE id = target_id;
+    RAISE NOTICE 'Admin user credentials forced and confirmed.';
   END IF;
+
+  -- 2. Re-ensure Profile & Roles
+  INSERT INTO public.profiles (id, full_name, role, status)
+  VALUES (target_id, 'Eiad Mokhtar Admin', 'admin', 'approved')
+  ON CONFLICT (id) DO UPDATE SET role = 'admin', status = 'approved', full_name = 'Eiad Mokhtar Admin';
+
+  INSERT INTO public.user_roles (user_id, role)
+  VALUES (target_id, 'admin')
+  ON CONFLICT DO NOTHING;
 END $$;
 
 -- 8. RELOAD SCHEMA CACHE
