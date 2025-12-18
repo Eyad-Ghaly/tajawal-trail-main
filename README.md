@@ -1,5 +1,4 @@
 # Welcome to your Lovable project
-<!-- Test update for GitHub Desktop demo -->
 
 ## Project info
 
