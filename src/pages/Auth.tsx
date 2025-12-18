@@ -67,22 +67,22 @@ const Auth = () => {
           email: validData.email,
           password: validData.password,
         });
-        
+
         if (error) throw error;
-        
+
         toast({
           title: "مرحباً بعودتك!",
           description: "تم تسجيل الدخول بنجاح",
         });
-        
+
         navigate("/dashboard");
       } else if (mode === "signup") {
-        const validData = validateOrThrow(signupSchema, { 
-          email, 
-          password, 
-          fullName, 
-          governorate, 
-          membershipNumber 
+        const validData = validateOrThrow(signupSchema, {
+          email,
+          password,
+          fullName,
+          governorate,
+          membershipNumber
         });
 
         const { error } = await supabase.auth.signUp({
@@ -99,14 +99,14 @@ const Auth = () => {
             emailRedirectTo: `${window.location.origin}/dashboard`,
           },
         });
-        
+
         if (error) throw error;
-        
+
         toast({
           title: "تم إنشاء الحساب!",
-          description: "حسابك معلق حالياً وسيتم مراجعته من قبل الإدارة",
+          description: "شكراً لتسجيلك في المنصة. حسابك معلق حالياً وسيتم مراجعته من قبل الإدارة قريباً يمكنك الواصل على الرقم 01124898339 وتجربة التسجيل بعد 5 دقائق",
         });
-        
+
         setMode("login");
       } else if (mode === "forgot-password") {
         const validData = validateOrThrow(forgotPasswordSchema, { email });
@@ -114,14 +114,14 @@ const Auth = () => {
         const { error } = await supabase.auth.resetPasswordForEmail(validData.email, {
           redirectTo: `${window.location.origin}/update-password`,
         });
-        
+
         if (error) throw error;
-        
+
         toast({
           title: "تم إرسال الرابط!",
           description: "تحقق من بريدك الإلكتروني لإعادة تعيين كلمة المرور",
         });
-        
+
         setMode("login");
       }
     } catch (error: any) {
@@ -185,7 +185,7 @@ const Auth = () => {
                     disabled={loading}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="governorate">المحافظة</Label>
                   <Select
@@ -235,7 +235,7 @@ const Auth = () => {
                 </div>
               </>
             )}
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">البريد الإلكتروني</Label>
               <Input
@@ -250,7 +250,7 @@ const Auth = () => {
                 className="text-left"
               />
             </div>
-            
+
             {mode !== "forgot-password" && (
               <div className="space-y-2">
                 <Label htmlFor="password">كلمة المرور</Label>
@@ -280,10 +280,10 @@ const Auth = () => {
                 </button>
               </div>
             )}
-            
-            <Button 
-              type="submit" 
-              className="w-full" 
+
+            <Button
+              type="submit"
+              className="w-full"
               disabled={loading}
             >
               {loading ? (
@@ -321,7 +321,7 @@ const Auth = () => {
                 العودة لتسجيل الدخول
               </Button>
             )}
-            
+
             {mode !== "forgot-password" && (
               <div className="text-center">
                 <button

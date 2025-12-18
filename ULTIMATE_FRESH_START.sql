@@ -280,8 +280,17 @@ do $$ begin
   drop policy if exists "Public profiles viewable" on profiles;
   create policy "Public profiles viewable" on profiles for select using (true);
   
-  drop policy if exists "Users update own" on profiles;
-  create policy "Users update own" on profiles for update using (auth.uid() = id);
+  -- Allow Admins to UPDATE any profile (Fix for 'Approve' button)
+  drop policy if exists "Admins can update any profile" on profiles;
+  create policy "Admins can update any profile" on profiles for update using (
+    auth.uid() = id OR exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  );
+
+  -- Allow Admins to DELETE any profile
+  drop policy if exists "Admins can delete any profile" on profiles;
+  create policy "Admins can delete any profile" on profiles for delete using (
+    auth.uid() = id OR exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  );
 
   drop policy if exists "Users insert own" on profiles;
   create policy "Users insert own" on profiles for insert with check (auth.uid() = id);
@@ -373,43 +382,41 @@ create or replace function public.handle_new_user()
 returns trigger as $$
 declare
   is_admin boolean;
-  meta_level text;
 begin
-  -- Debug Check: If you see this in the error message, this is the CORRECT trigger running.
   is_admin := (lower(new.email) = 'eiadmokhtar67@gmail.com');
-  meta_level := new.raw_user_meta_data->>'level';
-
-  -- 1. Create/Update Profile
+  
   insert into public.profiles (
     id, 
     full_name, 
-    avatar_url, 
     role, 
+    status, 
     level, 
-    governorate, 
-    membership_number, 
-    status
+    avatar_url,
+    governorate,
+    membership_number,
+    xp_total,
+    overall_progress,
+    data_progress,
+    english_progress,
+    soft_progress,
+    streak_days
   )
   values (
     new.id, 
-    coalesce(new.raw_user_meta_data->>'full_name', 'User'), 
-    new.raw_user_meta_data->>'avatar_url', 
+    -- Fallback to name from metadata, or email username if missing
+    coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)), 
     case when is_admin then 'admin'::app_role else 'learner'::app_role end,
-    case 
-      when meta_level is null or meta_level = '' then 'Beginner'::user_level 
-      else meta_level::user_level 
-    end,
+    case when is_admin then 'approved' else 'pending' end,
+    'Beginner',
+    new.raw_user_meta_data->>'avatar_url',
     new.raw_user_meta_data->>'governorate',
     new.raw_user_meta_data->>'membership_number',
-    case when is_admin then 'approved' else 'pending' end
+    0, 0, 0, 0, 0, 0
   )
   on conflict (id) do update 
   set role = excluded.role,
       status = excluded.status,
-      full_name = excluded.full_name,
-      level = excluded.level,
-      governorate = excluded.governorate,
-      membership_number = excluded.membership_number;
+      full_name = excluded.full_name;
 
   -- 2. Create Role Entry for Admin Check (Required for Frontend)
   if is_admin then
@@ -419,8 +426,6 @@ begin
   end if;
 
   return new;
-exception when others then
-  raise exception '[TAJAWAL_TRIGGER_ERROR] Error in handle_new_user: %', sqlerrm;
 end;
 $$ language plpgsql security definer;
 
@@ -462,6 +467,33 @@ create trigger on_task_created
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- 7. RECOVER ORPHAN USERS (Fixes missing profiles automatically)
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN 
+    SELECT * FROM auth.users u 
+    WHERE NOT EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = u.id)
+  LOOP
+    INSERT INTO public.profiles (
+      id, full_name, role, status, level, 
+      xp_total, overall_progress, data_progress, english_progress, soft_progress, streak_days,
+      avatar_url, governorate, membership_number
+    )
+    VALUES (
+      r.id,
+      COALESCE(r.raw_user_meta_data->>'full_name', r.raw_user_meta_data->>'name', split_part(r.email, '@', 1)),
+      'learner', 'pending', 'Beginner',
+      0, 0, 0, 0, 0, 0,
+      r.raw_user_meta_data->>'avatar_url',
+      r.raw_user_meta_data->>'governorate',
+      r.raw_user_meta_data->>'membership_number'
+    )
+    ON CONFLICT (id) DO NOTHING;
+  END LOOP;
+END $$;
 
 -- 7. INITIAL ADMIN USER SETUP
 DO $$
