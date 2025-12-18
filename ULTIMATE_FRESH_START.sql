@@ -36,7 +36,7 @@ create table if not exists public.profiles (
   id uuid references auth.users on delete cascade not null primary key,
   full_name text not null,
   avatar_url text,
-  level user_level,
+  level user_level default 'Beginner',
   role app_role default 'learner',
   xp_total integer default 0,
   overall_progress integer default 0,
@@ -361,17 +361,33 @@ begin
   is_admin := (new.email = 'eiadmokhtar67@gmail.com');
 
   -- 1. Create Profile
-  insert into public.profiles (id, full_name, avatar_url, role, status)
+  insert into public.profiles (
+    id, 
+    full_name, 
+    avatar_url, 
+    role, 
+    level, 
+    governorate, 
+    membership_number, 
+    status
+  )
   values (
     new.id, 
     coalesce(new.raw_user_meta_data->>'full_name', 'User'), 
     new.raw_user_meta_data->>'avatar_url', 
     case when is_admin then 'admin'::app_role else 'learner'::app_role end,
+    coalesce((new.raw_user_meta_data->>'level')::user_level, 'Beginner'::user_level),
+    new.raw_user_meta_data->>'governorate',
+    new.raw_user_meta_data->>'membership_number',
     case when is_admin then 'approved' else 'pending' end
   )
   on conflict (id) do update 
   set role = excluded.role,
-      status = excluded.status;
+      status = excluded.status,
+      full_name = excluded.full_name,
+      level = excluded.level,
+      governorate = excluded.governorate,
+      membership_number = excluded.membership_number;
 
   -- 2. Create Role Entry for Admin Check (Required for Frontend)
   if is_admin then
