@@ -56,7 +56,8 @@ create table if not exists public.profiles (
 );
 
 -- VIEW FOR CHAT DISPLAY (Critical for user names in chat)
-create or replace view public.public_profiles as
+create or replace view public.public_profiles 
+with (security_invoker = on) as
 select 
   id,
   full_name,

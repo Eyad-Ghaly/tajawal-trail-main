@@ -51,6 +51,8 @@ interface User {
   status: "pending" | "approved" | "rejected";
   role: "learner" | "admin";
   join_date: string;
+  email?: string;
+  phone_number?: string;
 }
 
 interface Task {
@@ -534,6 +536,8 @@ const Admin = () => {
                                 )}
                               </div>
                               <div className="text-xs text-muted-foreground mt-1">
+                                {user.email && <div className="font-medium text-primary">البريد: {user.email}</div>}
+                                {user.phone_number && <div className="font-medium text-secondary">الهاتف: {user.phone_number}</div>}
                                 تاريخ التسجيل: {new Date(user.created_at).toLocaleDateString("ar-SA")}
                               </div>
                             </div>
@@ -609,6 +613,8 @@ const Admin = () => {
                             <div>
                               <div className="font-medium">{learner.full_name}</div>
                               <div className="text-sm text-muted-foreground">
+                                {learner.email && <div className="text-xs font-medium text-primary">{learner.email}</div>}
+                                {learner.phone_number && <div className="text-xs font-medium text-secondary">{learner.phone_number}</div>}
                                 انضم {new Date(learner.join_date).toLocaleDateString("ar-SA")}
                               </div>
                             </div>

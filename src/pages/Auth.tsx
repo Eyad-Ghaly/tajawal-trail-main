@@ -226,6 +226,39 @@ const Auth = () => {
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="phoneNumber">رقم الهاتف</Label>
+                  <div className="flex gap-2">
+                    <Select
+                      value={phoneCode}
+                      onValueChange={setPhoneCode}
+                      disabled={loading}
+                    >
+                      <SelectTrigger className="w-24">
+                        <SelectValue placeholder="+20" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="+20">+20 (EG)</SelectItem>
+                        <SelectItem value="+966">+966 (SA)</SelectItem>
+                        <SelectItem value="+971">+971 (UAE)</SelectItem>
+                        <SelectItem value="+965">+965 (KW)</SelectItem>
+                        <SelectItem value="+974">+974 (QA)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      id="phoneNumber"
+                      type="tel"
+                      placeholder="1234567890"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      required
+                      disabled={loading}
+                      dir="ltr"
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+
                 {/* Placement Test Link */}
                 <div className="bg-muted/50 p-4 rounded-lg border">
                   <p className="text-sm text-muted-foreground mb-2">
