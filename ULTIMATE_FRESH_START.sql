@@ -55,6 +55,15 @@ create table if not exists public.profiles (
   updated_at timestamp with time zone default timezone('utc'::text, now())
 );
 
+-- FORCE ADD COLUMNS if they don't exist (Fix for existing tables)
+do $$ 
+begin
+  alter table public.profiles add column if not exists email text;
+  alter table public.profiles add column if not exists phone_number text;
+exception
+  when others then null;
+end $$;
+
 -- VIEW FOR CHAT DISPLAY (Critical for user names in chat)
 create or replace view public.public_profiles 
 with (security_invoker = on) as
@@ -397,6 +406,8 @@ begin
     avatar_url,
     governorate,
     membership_number,
+    email,
+    phone_number,
     xp_total,
     overall_progress,
     data_progress,
