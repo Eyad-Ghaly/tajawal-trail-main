@@ -47,6 +47,8 @@ create table if not exists public.profiles (
   join_date timestamp with time zone default timezone('utc'::text, now()),
   governorate text,
   membership_number text,
+  email text,
+  phone_number text,
   placement_test_url text,
   status text default 'pending',
   created_at timestamp with time zone default timezone('utc'::text, now()),
@@ -411,6 +413,8 @@ begin
     new.raw_user_meta_data->>'avatar_url',
     new.raw_user_meta_data->>'governorate',
     new.raw_user_meta_data->>'membership_number',
+    new.email,
+    new.raw_user_meta_data->>'phone_number',
     0, 0, 0, 0, 0, 0
   )
   on conflict (id) do update 
@@ -427,7 +431,7 @@ begin
 
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 -- Trigger to notify all users when a new lesson is added
 create or replace function public.notify_new_lesson()
@@ -467,6 +471,25 @@ create trigger on_task_created
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- Trigger to auto-confirm email when user is approved
+create or replace function public.confirm_user_email()
+returns trigger as $$
+begin
+  if new.status = 'approved' and old.status = 'pending' then
+    update auth.users
+    set email_confirmed_at = now(),
+        updated_at = now()
+    where id = new.id;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists on_user_approved on public.profiles;
+create trigger on_user_approved
+  after update on public.profiles
+  for each row execute procedure public.confirm_user_email();
 
 -- 7. RECOVER ORPHAN USERS (Fixes missing profiles automatically)
 DO $$

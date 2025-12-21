@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -30,6 +30,7 @@ interface UserLesson {
 const LearningPath = () => {
   const { trackType } = useParams<{ trackType: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [userLessons, setUserLessons] = useState<UserLesson[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,6 +106,19 @@ const LearningPath = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!loading && lessons.length > 0) {
+      const params = new URLSearchParams(location.search);
+      const lessonId = params.get("lessonId");
+      if (lessonId) {
+        const element = document.getElementById(`lesson-${lessonId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }
+    }
+  }, [loading, lessons, location.search]);
 
   const handleCheckboxChange = async (lessonId: string, checked: boolean) => {
     try {
@@ -224,7 +238,11 @@ const LearningPath = () => {
             lessons.map((lesson, index) => {
               const isWatched = isLessonWatched(lesson.id);
               return (
-                <Card key={lesson.id} className={`border-none shadow-lg transition-all ${isWatched ? 'bg-muted/50' : ''}`}>
+                <Card
+                  key={lesson.id}
+                  id={`lesson-${lesson.id}`}
+                  className={`border-none shadow-lg transition-all ${isWatched ? 'bg-muted/50' : ''}`}
+                >
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
                       {/* Checkbox */}

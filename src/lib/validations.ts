@@ -33,9 +33,15 @@ export const loginSchema = z.object({
 export const signupSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
+  confirmPassword: passwordSchema,
   fullName: fullNameSchema,
   governorate: z.string().min(1, "يرجى اختيار المحافظة"),
   membershipNumber: membershipNumberSchema,
+  phoneCode: z.string().min(1, "يرجى اختيار رمز الدولة"),
+  phoneNumber: z.string().min(8, "رقم الهاتف غير صالح").regex(/^[0-9]+$/, "يجب أن يحتوي رقم الهاتف على أرقام فقط"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "كلمات المرور غير متطابقة",
+  path: ["confirmPassword"],
 });
 
 export const forgotPasswordSchema = z.object({

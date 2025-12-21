@@ -29,7 +29,7 @@ export const NotificationsDropdown = () => {
 
   useEffect(() => {
     loadNotifications();
-    
+
     // Subscribe to realtime notifications
     const channel = supabase
       .channel('notifications-realtime')
@@ -93,11 +93,20 @@ export const NotificationsDropdown = () => {
     setUnreadCount(0);
   };
 
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = async (notification: Notification) => {
     markAsRead(notification.id);
-    
+
     if (notification.type === "lesson" && notification.related_id) {
-      navigate(`/learning-path?lessonId=${notification.related_id}`);
+      // Find the lesson track type to navigate correctly
+      const { data: lesson } = await supabase
+        .from("lessons")
+        .select("track_type")
+        .eq("id", notification.related_id)
+        .single();
+
+      if (lesson) {
+        navigate(`/learning-path/${lesson.track_type}?lessonId=${notification.related_id}`);
+      }
     } else if (notification.type === "task" && notification.related_id) {
       navigate(`/task/${notification.related_id}`);
     }
@@ -167,9 +176,8 @@ export const NotificationsDropdown = () => {
             notifications.map((notification) => (
               <DropdownMenuItem
                 key={notification.id}
-                className={`p-3 cursor-pointer ${
-                  !notification.read ? "bg-primary/5" : ""
-                }`}
+                className={`p-3 cursor-pointer ${!notification.read ? "bg-primary/5" : ""
+                  }`}
                 onClick={() => handleNotificationClick(notification)}
               >
                 <div className="flex gap-3 w-full">

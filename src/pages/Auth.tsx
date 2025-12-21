@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, LogIn, UserPlus, ExternalLink, KeyRound, ArrowRight } from "lucide-react";
+import { Loader2, LogIn, UserPlus, ExternalLink, KeyRound, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { loginSchema, signupSchema, forgotPasswordSchema, validateOrThrow } from "@/lib/validations";
 
@@ -51,6 +51,11 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [governorate, setGovernorate] = useState("");
   const [membershipNumber, setMembershipNumber] = useState("");
+  const [phoneCode, setPhoneCode] = useState("+20");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -79,10 +84,13 @@ const Auth = () => {
       } else if (mode === "signup") {
         const validData = validateOrThrow(signupSchema, {
           email,
-          password,
           fullName,
           governorate,
-          membershipNumber
+          membershipNumber,
+          phoneCode,
+          phoneNumber,
+          password,
+          confirmPassword
         });
 
         const { error } = await supabase.auth.signUp({
@@ -95,6 +103,7 @@ const Auth = () => {
               level: "Beginner",
               governorate: validData.governorate,
               membership_number: validData.membershipNumber,
+              phone_number: `${validData.phoneCode}${validData.phoneNumber}`,
             },
             emailRedirectTo: `${window.location.origin}/dashboard`,
           },
@@ -254,17 +263,54 @@ const Auth = () => {
             {mode !== "forgot-password" && (
               <div className="space-y-2">
                 <Label htmlFor="password">كلمة المرور</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={loading}
-                  dir="ltr"
-                  className="text-left"
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={loading}
+                    dir="ltr"
+                    className="text-left pl-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 left-0 pl-3 flex items-center text-muted-foreground hover:text-primary"
+                    disabled={loading}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {mode === "signup" && (
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">تأكيد كلمة المرور</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    disabled={loading}
+                    dir="ltr"
+                    className="text-left pl-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 left-0 pl-3 flex items-center text-muted-foreground hover:text-primary"
+                    disabled={loading}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
             )}
 
