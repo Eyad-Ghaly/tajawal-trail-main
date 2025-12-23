@@ -235,7 +235,7 @@ const Dashboard = () => {
 
       const today = new Date().toISOString().split('T')[0];
 
-      // Check if already checked in today
+      // Check if already checked in today (any task)
       const { data: existing } = await supabase
         .from("daily_checkin")
         .select("*")
@@ -243,35 +243,27 @@ const Dashboard = () => {
         .eq("date", today)
         .maybeSingle();
 
-      const field = `${trackType}_task`;
-
-      if (existing && existing[field]) {
+      if (existing) {
         toast({
           title: "تم التسجيل مسبقاً",
-          description: "لقد سجلت حضورك اليوم في هذا المسار",
+          description: "لقد سجلت حضورك اليوم بالفعل",
           variant: "destructive",
         });
         return;
       }
 
-      if (existing) {
-        await supabase
-          .from("daily_checkin")
-          .update({
-            [field]: true,
-            xp_generated: (existing.xp_generated || 0) + 5,
-          })
-          .eq("id", existing.id);
-      } else {
-        await supabase
-          .from("daily_checkin")
-          .insert({
-            user_id: user.id,
-            date: today,
-            [field]: true,
-            xp_generated: 5,
-          });
-      }
+      // Create a single check-in for all tracks
+      // This grants 5 XP once and completes the streak requirements
+      await supabase
+        .from("daily_checkin")
+        .insert({
+          user_id: user.id,
+          date: today,
+          data_task: true,
+          lang_task: true,
+          soft_task: true,
+          xp_generated: 5,
+        });
 
       // Update profile XP
       await supabase
@@ -283,7 +275,7 @@ const Dashboard = () => {
 
       toast({
         title: "رائع! 🎉",
-        description: "حصلت على 5 XP من التسجيل اليومي",
+        description: "حصلت على 5 XP من التسجيل اليومي السريع",
       });
 
       loadData();
@@ -509,14 +501,14 @@ const Dashboard = () => {
             <div className="grid gap-3 md:grid-cols-3">
               <Button
                 variant="outline"
-                className={`h-20 flex-col gap-2 relative ${todayCheckin?.data_task
+                className={`h-20 flex-col gap-2 relative ${todayCheckin
                   ? "border-success bg-success/10"
                   : "hover:border-primary hover:bg-primary/5"
                   }`}
                 onClick={() => handleDailyCheckin("data")}
-                disabled={todayCheckin?.data_task}
+                disabled={!!todayCheckin}
               >
-                {todayCheckin?.data_task && (
+                {todayCheckin && (
                   <CheckCircle2 className="h-5 w-5 text-success absolute top-2 right-2" />
                 )}
                 <Brain className="h-6 w-6 text-primary" />
@@ -524,14 +516,14 @@ const Dashboard = () => {
               </Button>
               <Button
                 variant="outline"
-                className={`h-20 flex-col gap-2 relative ${todayCheckin?.lang_task
+                className={`h-20 flex-col gap-2 relative ${todayCheckin
                   ? "border-success bg-success/10"
                   : "hover:border-secondary hover:bg-secondary/5"
                   }`}
                 onClick={() => handleDailyCheckin("lang")}
-                disabled={todayCheckin?.lang_task}
+                disabled={!!todayCheckin}
               >
-                {todayCheckin?.lang_task && (
+                {todayCheckin && (
                   <CheckCircle2 className="h-5 w-5 text-success absolute top-2 right-2" />
                 )}
                 <Globe className="h-6 w-6 text-secondary" />
@@ -539,14 +531,14 @@ const Dashboard = () => {
               </Button>
               <Button
                 variant="outline"
-                className={`h-20 flex-col gap-2 relative ${todayCheckin?.soft_task
+                className={`h-20 flex-col gap-2 relative ${todayCheckin
                   ? "border-success bg-success/10"
                   : "hover:border-success hover:bg-success/5"
                   }`}
                 onClick={() => handleDailyCheckin("soft")}
-                disabled={todayCheckin?.soft_task}
+                disabled={!!todayCheckin}
               >
-                {todayCheckin?.soft_task && (
+                {todayCheckin && (
                   <CheckCircle2 className="h-5 w-5 text-success absolute top-2 right-2" />
                 )}
                 <Users className="h-6 w-6 text-success" />
