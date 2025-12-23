@@ -132,6 +132,20 @@ export const Navbar = () => {
         <div className="flex items-center gap-2">
           <NotificationsDropdown />
 
+          {isAdmin && (
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/admin")}
+              className={cn(
+                "hidden md:flex gap-2",
+                isActive("/admin") && "bg-primary/10 text-primary border-b-2 border-primary rounded-b-none"
+              )}
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              لوحة الإدارة
+            </Button>
+          )}
+
           {/* Mobile Menu */}
           <div className="md:hidden">
             <Sheet>
