@@ -190,24 +190,24 @@ const Posts = () => {
         <div className="min-h-screen bg-background">
             <Navbar />
 
-            <div className="container max-w-2xl py-8 space-y-6">
-                <h1 className="text-3xl font-bold mb-6">المنشورات والتحديثات</h1>
+            <div className="container max-w-2xl px-4 py-6 md:py-8 space-y-6">
+                <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">المنشورات والتحديثات</h1>
 
                 {/* Create Post Section - Admin Only */}
                 {isAdmin && (
                     <Card className="shadow-lg border-2 border-primary/10">
-                        <CardHeader>
+                        <CardHeader className="p-4 md:p-6">
                             <CardTitle className="text-lg">إضافة منشور جديد</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent className="p-4 md:p-6 space-y-4">
                             <Textarea
                                 placeholder="بم تفكر؟"
                                 value={newPostContent}
                                 onChange={(e) => setNewPostContent(e.target.value)}
-                                className="min-h-[100px] resize-none text-lg"
+                                className="min-h-[100px] md:min-h-[120px] resize-none text-base md:text-lg"
                             />
 
-                            <div className="flex flex-wrap gap-4">
+                            <div className="flex flex-wrap gap-2 md:gap-4">
                                 <div className="flex items-center gap-2">
                                     <Input
                                         type="file"
@@ -218,11 +218,13 @@ const Posts = () => {
                                     />
                                     <Button
                                         variant="outline"
+                                        size="sm"
                                         onClick={() => document.getElementById('image-upload')?.click()}
                                         className={selectedImage ? "border-primary text-primary" : ""}
                                     >
                                         <ImageIcon className="h-4 w-4 mr-2" />
-                                        {selectedImage ? "تم اختيار صورة" : "صورة"}
+                                        <span className="hidden sm:inline">{selectedImage ? "تم اختيار صورة" : "صورة"}</span>
+                                        <span className="sm:hidden">صورة</span>
                                     </Button>
                                 </div>
 
@@ -236,19 +238,21 @@ const Posts = () => {
                                     />
                                     <Button
                                         variant="outline"
+                                        size="sm"
                                         onClick={() => document.getElementById('video-upload')?.click()}
                                         className={selectedVideo ? "border-primary text-primary" : ""}
                                     >
                                         <Video className="h-4 w-4 mr-2" />
-                                        {selectedVideo ? "تم اختيار فيديو" : "فيديو"}
+                                        <span className="hidden sm:inline">{selectedVideo ? "تم اختيار فيديو" : "فيديو"}</span>
+                                        <span className="sm:hidden">فيديو</span>
                                     </Button>
                                 </div>
                             </div>
 
                             {(selectedImage || selectedVideo) && (
                                 <div className="p-2 bg-muted rounded text-sm relative">
-                                    {selectedImage && <p>📸 {selectedImage.name}</p>}
-                                    {selectedVideo && <p>🎥 {selectedVideo.name}</p>}
+                                    {selectedImage && <p className="truncate">📸 {selectedImage.name}</p>}
+                                    {selectedVideo && <p className="truncate">🎥 {selectedVideo.name}</p>}
                                     <Button
                                         variant="ghost"
                                         size="sm"
@@ -260,8 +264,9 @@ const Posts = () => {
                                 </div>
                             )}
                         </CardContent>
-                        <CardFooter className="flex justify-end">
+                        <CardFooter className="p-4 md:p-6 flex justify-end">
                             <Button
+                                className="w-full sm:w-auto"
                                 onClick={handleCreatePost}
                                 disabled={submitting || (!newPostContent.trim() && !selectedImage && !selectedVideo)}
                             >
@@ -282,7 +287,7 @@ const Posts = () => {
                 )}
 
                 {/* Posts List */}
-                <div className="space-y-6">
+                <div className="space-y-4 md:space-y-6">
                     {loading ? (
                         <div className="flex justify-center py-10">
                             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -293,19 +298,19 @@ const Posts = () => {
                         </div>
                     ) : (
                         posts.map((post) => (
-                            <Card key={post.id} className="shadow-md overflow-hidden">
-                                <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-2">
-                                    <Avatar>
+                            <Card key={post.id} className="shadow-md overflow-hidden border-none md:border">
+                                <CardHeader className="flex flex-row items-start gap-3 md:gap-4 space-y-0 p-4 pb-2 md:p-6 md:pb-2">
+                                    <Avatar className="h-10 w-10 md:h-12 md:w-12">
                                         <AvatarImage src={post.profile?.avatar_url || ''} />
                                         <AvatarFallback>{post.profile?.full_name?.charAt(0) || '?'}</AvatarFallback>
                                     </Avatar>
-                                    <div className="flex-1">
-                                        <div className="flex items-center justify-between">
-                                            <h3 className="font-semibold">{post.profile?.full_name}</h3>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <h3 className="font-semibold truncate text-base md:text-lg">{post.profile?.full_name}</h3>
                                             {isAdmin && (
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
                                                             <MoreVertical className="h-4 w-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
@@ -321,29 +326,29 @@ const Posts = () => {
                                                 </DropdownMenu>
                                             )}
                                         </div>
-                                        <p className="text-sm text-muted-foreground">
+                                        <p className="text-xs md:text-sm text-muted-foreground">
                                             {formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: ar })}
                                         </p>
                                     </div>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <p className="whitespace-pre-wrap text-lg leading-relaxed">{post.content}</p>
+                                <CardContent className="p-4 pt-2 md:p-6 md:pt-4 space-y-4">
+                                    <p className="whitespace-pre-wrap text-base md:text-lg leading-relaxed">{post.content}</p>
 
                                     {post.image_url && (
-                                        <div className="rounded-lg overflow-hidden border">
+                                        <div className="rounded-lg overflow-hidden border -mx-4 md:mx-0">
                                             <img
                                                 src={post.image_url}
                                                 alt="Post attachment"
-                                                className="w-full h-auto max-h-[500px] object-cover"
+                                                className="w-full h-auto max-h-[400px] md:max-h-[500px] object-cover"
                                             />
                                         </div>
                                     )}
 
                                     {post.video_url && (
-                                        <div className="rounded-lg overflow-hidden border bg-black">
+                                        <div className="rounded-lg overflow-hidden border bg-black -mx-4 md:mx-0">
                                             <video
                                                 controls
-                                                className="w-full h-auto max-h-[500px]"
+                                                className="w-full h-auto max-h-[400px] md:max-h-[500px]"
                                                 src={post.video_url}
                                             />
                                         </div>

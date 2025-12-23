@@ -15,6 +15,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
+import { Menu } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 export const Navbar = () => {
   const navigate = useNavigate();
@@ -123,19 +131,99 @@ export const Navbar = () => {
 
         <div className="flex items-center gap-2">
           <NotificationsDropdown />
-          {isAdmin && (
-            <Button
-              variant="ghost"
-              onClick={() => navigate("/admin")}
-              className={cn(
-                "gap-2",
-                isActive("/admin") && "bg-primary/10 text-primary border-b-2 border-primary rounded-b-none"
-              )}
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              لوحة الإدارة
-            </Button>
-          )}
+
+          {/* Mobile Menu */}
+          <div className="md:hidden">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-10 w-10">
+                  <Menu className="h-6 w-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+                <SheetHeader className="mb-8">
+                  <SheetTitle className="text-right flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
+                      </svg>
+                    </div>
+                    قائمة التنقل
+                  </SheetTitle>
+                </SheetHeader>
+                <nav className="flex flex-col gap-4">
+                  <Button
+                    variant="ghost"
+                    onClick={() => navigate("/dashboard")}
+                    className={cn(
+                      "justify-start gap-4 h-12 text-lg",
+                      isActive("/dashboard") && "bg-primary/10 text-primary"
+                    )}
+                  >
+                    <LayoutDashboard className="h-5 w-5" />
+                    لوحة المتابعة
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => navigate("/classrooms")}
+                    className={cn(
+                      "justify-start gap-4 h-12 text-lg",
+                      isActive("/classrooms") && "bg-primary/10 text-primary"
+                    )}
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    الفصول الدراسية (الرسايل)
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => navigate("/posts")}
+                    className={cn(
+                      "justify-start gap-4 h-12 text-lg",
+                      isActive("/posts") && "bg-primary/10 text-primary"
+                    )}
+                  >
+                    <Newspaper className="h-5 w-5" />
+                    المنشورات
+                  </Button>
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      onClick={() => navigate("/admin")}
+                      className={cn(
+                        "justify-start gap-4 h-12 text-lg",
+                        isActive("/admin") && "bg-primary/10 text-primary"
+                      )}
+                    >
+                      <LayoutDashboard className="h-5 w-5" />
+                      لوحة الإدارة
+                    </Button>
+                  )}
+                  <DropdownMenuSeparator />
+                  <Button
+                    variant="ghost"
+                    onClick={() => navigate("/profile")}
+                    className={cn(
+                      "justify-start gap-4 h-12 text-lg",
+                      isActive("/profile") && "bg-primary/10 text-primary"
+                    )}
+                  >
+                    <User className="h-5 w-5" />
+                    الملف الشخصي
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={handleLogout}
+                    className="justify-start gap-4 h-12 text-lg text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <LogOut className="h-5 w-5" />
+                    تسجيل الخروج
+                  </Button>
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

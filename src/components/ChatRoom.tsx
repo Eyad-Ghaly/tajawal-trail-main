@@ -53,7 +53,7 @@ export function ChatRoom({ lessonId, levelClassroom, title }: ChatRoomProps) {
 
   useEffect(() => {
     fetchMessages();
-    
+
     const channel = supabase
       .channel('chat_messages')
       .on(
@@ -62,8 +62,8 @@ export function ChatRoom({ lessonId, levelClassroom, title }: ChatRoomProps) {
           event: '*',
           schema: 'public',
           table: 'chat_messages',
-          filter: lessonId 
-            ? `lesson_id=eq.${lessonId}` 
+          filter: lessonId
+            ? `lesson_id=eq.${lessonId}`
             : `level_classroom=eq.${levelClassroom}`
         },
         () => {
@@ -186,7 +186,7 @@ export function ChatRoom({ lessonId, levelClassroom, title }: ChatRoomProps) {
       if (selectedImage) {
         const fileExt = selectedImage.name.split('.').pop();
         const fileName = `${currentUserId}/${Date.now()}.${fileExt}`;
-        
+
         const { error: uploadError } = await supabase.storage
           .from('chat-images')
           .upload(fileName, selectedImage);
@@ -260,9 +260,12 @@ export function ChatRoom({ lessonId, levelClassroom, title }: ChatRoomProps) {
   };
 
   return (
-    <Card className="flex flex-col h-[600px]">
-      <div className="p-4 border-b">
-        <h3 className="text-lg font-semibold">{title}</h3>
+    <Card className="flex flex-col h-[500px] md:h-[600px] max-h-[80vh] md:max-h-none border-none md:border shadow-lg">
+      <div className="p-3 md:p-4 border-b bg-muted/30">
+        <h3 className="text-base md:text-lg font-semibold flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+          {title}
+        </h3>
       </div>
 
       <ScrollArea className="flex-1 p-4">
@@ -270,16 +273,15 @@ export function ChatRoom({ lessonId, levelClassroom, title }: ChatRoomProps) {
           {messages.map((msg) => (
             <div
               key={msg.id}
-              className={`flex gap-3 ${
-                msg.user_id === currentUserId ? 'flex-row-reverse' : ''
-              }`}
+              className={`flex gap-3 ${msg.user_id === currentUserId ? 'flex-row-reverse' : ''
+                }`}
             >
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <span className="text-sm font-medium">
                   {msg.profile?.full_name?.charAt(0) || '؟'}
                 </span>
               </div>
-              
+
               <div className={`flex-1 ${msg.user_id === currentUserId ? 'text-right' : ''}`}>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-sm font-medium">
@@ -300,15 +302,14 @@ export function ChatRoom({ lessonId, levelClassroom, title }: ChatRoomProps) {
                   )}
                 </div>
                 <div
-                  className={`p-3 rounded-lg ${
-                    msg.user_id === currentUserId
+                  className={`p-3 rounded-lg ${msg.user_id === currentUserId
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted'
-                  }`}
+                    }`}
                 >
                   {msg.image_url && (
-                    <img 
-                      src={msg.image_url} 
+                    <img
+                      src={msg.image_url}
                       alt="صورة مرفقة"
                       className="max-w-xs rounded-lg mb-2"
                     />
@@ -327,8 +328,8 @@ export function ChatRoom({ lessonId, levelClassroom, title }: ChatRoomProps) {
       <div className="p-4 border-t">
         {imagePreview && (
           <div className="mb-2 relative inline-block">
-            <img 
-              src={imagePreview} 
+            <img
+              src={imagePreview}
               alt="معاينة"
               className="max-h-32 rounded-lg"
             />
