@@ -13,6 +13,7 @@ import Classrooms from "./pages/Classrooms";
 import LearningPath from "./pages/LearningPath";
 import TaskDetails from "./pages/TaskDetails";
 import UpdatePassword from "./pages/UpdatePassword";
+import Posts from "./pages/Posts";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -101,6 +102,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <TaskDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/posts"
+              element={
+                <ProtectedRoute>
+                  <Posts />
                 </ProtectedRoute>
               }
             />

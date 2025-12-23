@@ -1,8 +1,9 @@
+
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, LayoutDashboard, User } from "lucide-react";
+import { LogOut, LayoutDashboard, User, Newspaper } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -38,7 +39,7 @@ export const Navbar = () => {
         .eq("id", user.id)
         .single();
       setProfile(profileData);
-      
+
       // Check if user has admin role from user_roles table
       const { data: roleData } = await supabase
         .from("user_roles")
@@ -106,6 +107,17 @@ export const Navbar = () => {
               </svg>
               الفصول الدراسية
             </Button>
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/posts")}
+              className={cn(
+                "gap-2",
+                isActive("/posts") && "bg-primary/10 text-primary border-b-2 border-primary rounded-b-none"
+              )}
+            >
+              <Newspaper className="h-4 w-4" />
+              المنشورات
+            </Button>
           </nav>
         </div>
 
@@ -157,6 +169,10 @@ export const Navbar = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
                 الفصول الدراسية
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/posts")}>
+                <Newspaper className="ml-2 h-4 w-4" />
+                المنشورات
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-destructive">
