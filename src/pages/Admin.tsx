@@ -23,6 +23,7 @@ import {
   Camera
 } from "lucide-react";
 import { UserCustomLessons } from "@/components/admin/UserCustomLessons";
+import { useNavigate } from "react-router-dom";
 import { UserCustomTasks } from "@/components/admin/UserCustomTasks";
 import { UserAvatarUpload } from "@/components/admin/UserAvatarUpload";
 import { GlobalLessonDialog } from "@/components/admin/GlobalLessonDialog";
@@ -89,6 +90,7 @@ interface Proof {
 }
 
 const Admin = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [stats, setStats] = useState({
     totalLearners: 0,
@@ -659,15 +661,17 @@ const Admin = () => {
                             <UserCustomTasks
                               userId={learner.id}
                               userName={learner.full_name}
+                              onUpdate={loadData}
                             />
                             <UserCustomLessons
                               userId={learner.id}
                               userName={learner.full_name}
+                              onUpdate={loadData}
                             />
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => window.location.href = `/profile?userId=${learner.id}`}
+                              onClick={() => navigate(`/profile?userId=${learner.id}`)}
                             >
                               <Eye className="h-4 w-4 ml-2" />
                               عرض الملف

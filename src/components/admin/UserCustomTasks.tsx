@@ -37,9 +37,10 @@ interface CustomTask {
 interface UserCustomTasksProps {
     userId: string;
     userName: string;
+    onUpdate?: () => void;
 }
 
-export const UserCustomTasks = ({ userId, userName }: UserCustomTasksProps) => {
+export const UserCustomTasks = ({ userId, userName, onUpdate }: UserCustomTasksProps) => {
     const { toast } = useToast();
     const [tasks, setTasks] = useState<CustomTask[]>([]);
     const [loading, setLoading] = useState(true);
@@ -97,10 +98,12 @@ export const UserCustomTasks = ({ userId, userName }: UserCustomTasksProps) => {
             });
         } else {
             toast({
-                title: "تم إضافة المهمة ✅",
+                title: "تم إضافة المهمة",
+                description: "تم إضافة المهمة المخصصة للمستخدم بنجاح",
             });
             setNewTask({ title: "", description: "", track_type: "data", xp_value: 10 });
             loadTasks();
+            if (onUpdate) onUpdate();
         }
     };
 
@@ -118,8 +121,10 @@ export const UserCustomTasks = ({ userId, userName }: UserCustomTasksProps) => {
         } else {
             toast({
                 title: "تم حذف المهمة",
+                description: "تم حذف المهمة بنجاح",
             });
             loadTasks();
+            if (onUpdate) onUpdate();
         }
     };
 

@@ -36,9 +36,10 @@ interface CustomLesson {
 interface UserCustomLessonsProps {
   userId: string;
   userName: string;
+  onUpdate?: () => void;
 }
 
-export const UserCustomLessons = ({ userId, userName }: UserCustomLessonsProps) => {
+export const UserCustomLessons = ({ userId, userName, onUpdate }: UserCustomLessonsProps) => {
   const { toast } = useToast();
   const [lessons, setLessons] = useState<CustomLesson[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,10 +108,12 @@ export const UserCustomLessons = ({ userId, userName }: UserCustomLessonsProps) 
       });
     } else {
       toast({
-        title: "تم إضافة الدرس ✅",
+        title: "تم إضافة الدرس",
+        description: "تم إضافة الدرس المخصص للمستخدم بنجاح",
       });
-      setNewLesson({ title: "", description: "", video_link: "", track_type: "data" });
       loadLessons();
+      if (onUpdate) onUpdate();
+      setNewLesson({ title: "", description: "", video_link: "", track_type: "data" });
     }
   };
 
@@ -128,8 +131,10 @@ export const UserCustomLessons = ({ userId, userName }: UserCustomLessonsProps) 
     } else {
       toast({
         title: "تم حذف الدرس",
+        description: "تم حذف الدرس بنجاح",
       });
       loadLessons();
+      if (onUpdate) onUpdate();
     }
   };
 
