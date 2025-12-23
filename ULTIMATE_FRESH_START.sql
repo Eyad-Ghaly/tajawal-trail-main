@@ -51,6 +51,7 @@ create table if not exists public.profiles (
   phone_number text,
   placement_test_url text,
   status text default 'pending',
+  last_streak_date date,
   created_at timestamp with time zone default timezone('utc'::text, now()),
   updated_at timestamp with time zone default timezone('utc'::text, now())
 );
@@ -173,6 +174,20 @@ create table if not exists public.custom_lessons (
   updated_at timestamp with time zone default timezone('utc'::text, now())
 );
 
+-- CUSTOM_TASKS
+create table if not exists public.custom_tasks (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  title text not null,
+  description text,
+  track_type text default 'data' not null,
+  xp_value integer default 10,
+  completed boolean default false,
+  completed_at timestamp with time zone,
+  created_at timestamp with time zone default timezone('utc'::text, now()),
+  updated_at timestamp with time zone default timezone('utc'::text, now())
+);
+
 -- ACTIVITIES
 create table if not exists public.activities (
   id uuid default uuid_generate_v4() primary key,
@@ -231,6 +246,7 @@ alter table tasks enable row level security;
 alter table user_tasks enable row level security;
 alter table user_lessons enable row level security;
 alter table custom_lessons enable row level security;
+alter table custom_tasks enable row level security;
 alter table activities enable row level security;
 alter table daily_checkin enable row level security;
 alter table chat_messages enable row level security;
@@ -323,6 +339,7 @@ do $$ begin
   grant all on public.user_lessons to authenticated;
   grant all on public.user_tasks to authenticated;
   grant all on public.custom_lessons to authenticated;
+  grant all on public.custom_tasks to authenticated;
   grant all on public.notifications to authenticated;
   grant all on public.daily_checkin to authenticated;
   grant all on public.chat_messages to authenticated;
@@ -411,8 +428,14 @@ do $$ begin
   create policy "Users manage own custom lessons" on custom_lessons for all using (auth.uid() = user_id);
   
   drop policy if exists "Admins manage everything on custom lessons" on custom_lessons;
-  drop policy if exists "Admins manage everything on custom lessons" on custom_lessons;
   create policy "Admins manage everything on custom lessons" on custom_lessons for all using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+
+  -- Custom Tasks Policies
+  drop policy if exists "Users manage own custom tasks" on custom_tasks;
+  create policy "Users manage own custom tasks" on custom_tasks for all using (auth.uid() = user_id);
+
+  drop policy if exists "Admins manage everything on custom tasks" on custom_tasks;
+  create policy "Admins manage everything on custom tasks" on custom_tasks for all using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
 
   -- Posts Policies
   drop policy if exists "Posts are viewable by everyone" on posts;
@@ -552,6 +575,60 @@ drop trigger if exists on_user_approved on public.profiles;
 create trigger on_user_approved
   after update on public.profiles
   for each row execute procedure public.confirm_user_email();
+
+-- Streak Calculation Trigger
+create or replace function public.handle_streak_update()
+returns trigger as $$
+declare
+  is_all_done boolean;
+  current_streak integer;
+  last_date date;
+begin
+  -- Check if all 3 tasks are done for the updated/inserted row
+  is_all_done := (new.data_task = true AND new.lang_task = true AND new.soft_task = true);
+  
+  -- Only proceed if all tasks are done
+  if is_all_done then
+    -- Get current streak info
+    select streak_days, last_streak_date 
+    into current_streak, last_date
+    from public.profiles
+    where id = new.user_id;
+
+    -- Handle case where streak_days is null
+    if current_streak is null then current_streak := 0; end if;
+
+    -- LOGIC:
+    -- 1. If last_streak_date is Today (new.date), do nothing multple times today
+    -- 2. If last_streak_date is Yesterday (new.date - 1), Increment.
+    -- 3. Otherwise (gap or first time), Reset to 1.
+    
+    if last_date = new.date then
+      -- Already counted for today, do nothing
+      return new;
+    elsif last_date = (new.date - 1) then
+      -- Streak continues!
+      update public.profiles
+      set streak_days = current_streak + 1,
+          last_streak_date = new.date
+      where id = new.user_id;
+    else
+      -- Streak broken or new started
+      update public.profiles
+      set streak_days = 1,
+          last_streak_date = new.date
+      where id = new.user_id;
+    end if;
+  end if;
+
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists on_daily_checkin_update on public.daily_checkin;
+create trigger on_daily_checkin_update
+  after insert or update on public.daily_checkin
+  for each row execute procedure public.handle_streak_update();
 
 -- 7. RECOVER ORPHAN USERS (Fixes missing profiles automatically)
 DO $$

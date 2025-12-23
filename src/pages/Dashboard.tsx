@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { CustomLessonsCard } from "@/components/CustomLessonsCard";
+import { CustomTasksCard } from "@/components/CustomTasksCard";
 import {
   TrendingUp,
   Target,
@@ -31,6 +32,7 @@ const Dashboard = () => {
   const [tasks, setTasks] = useState<any[]>([]);
   const [lessons, setLessons] = useState<any[]>([]);
   const [customLessons, setCustomLessons] = useState<any[]>([]);
+  const [customTasks, setCustomTasks] = useState<any[]>([]);
   const [todayCheckin, setTodayCheckin] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -211,6 +213,14 @@ const Dashboard = () => {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       setCustomLessons(customLessonsData || []);
+
+      // Load custom tasks
+      const { data: customTasksData } = await supabase
+        .from("custom_tasks" as any)
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      setCustomTasks((customTasksData as any) || []);
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
@@ -641,8 +651,11 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Custom Lessons */}
-        <CustomLessonsCard lessons={customLessons} onUpdate={loadData} />
+        {/* Custom Content */}
+        <div className="space-y-6">
+          <CustomTasksCard tasks={customTasks} onUpdate={loadData} />
+          <CustomLessonsCard lessons={customLessons} onUpdate={loadData} />
+        </div>
       </div>
     </div>
   );

@@ -23,6 +23,7 @@ import {
   Camera
 } from "lucide-react";
 import { UserCustomLessons } from "@/components/admin/UserCustomLessons";
+import { UserCustomTasks } from "@/components/admin/UserCustomTasks";
 import { UserAvatarUpload } from "@/components/admin/UserAvatarUpload";
 import { GlobalLessonDialog } from "@/components/admin/GlobalLessonDialog";
 import { GlobalTaskDialog } from "@/components/admin/GlobalTaskDialog";
@@ -655,6 +656,10 @@ const Admin = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
+                            <UserCustomTasks
+                              userId={learner.id}
+                              userName={learner.full_name}
+                            />
                             <UserCustomLessons
                               userId={learner.id}
                               userName={learner.full_name}
