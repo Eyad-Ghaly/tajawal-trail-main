@@ -234,7 +234,23 @@ alter table custom_lessons enable row level security;
 alter table activities enable row level security;
 alter table daily_checkin enable row level security;
 alter table chat_messages enable row level security;
-alter table notifications enable row level security;
+  alter table notifications enable row level security;
+  
+  -- 5. POSTS TABLE (New Feature)
+  -- DROP to ensure fresh creation as requested
+  drop table if exists public.posts cascade;
+  
+  create table public.posts (
+    id uuid default uuid_generate_v4() primary key,
+    content text not null,
+    image_url text,
+    video_url text,
+    user_id uuid references public.profiles(id) on delete cascade not null,
+    created_at timestamp with time zone default timezone('utc'::text, now()),
+    updated_at timestamp with time zone default timezone('utc'::text, now())
+  );
+  
+  alter table public.posts enable row level security;
 
 -- 3. STORAGE SETUP
 -- Create buckets if they don't exist
@@ -243,8 +259,12 @@ values ('avatars', 'avatars', true)
 on conflict (id) do nothing;
 
 insert into storage.buckets (id, name, public)
-values ('chat-images', 'chat-images', true)
-on conflict (id) do nothing;
+  values ('chat-images', 'chat-images', true)
+  on conflict (id) do nothing;
+
+  insert into storage.buckets (id, name, public)
+  values ('post-media', 'post-media', true)
+  on conflict (id) do nothing;
 
 -- Set up RLS for storage.objects
 -- Note: We assume RLS is enabled on storage.objects by default in Supabase
@@ -260,12 +280,34 @@ create policy "Users can upload their own avatar" on storage.objects for insert 
 drop policy if exists "Users can update their own avatar" on storage.objects;
 create policy "Users can update their own avatar" on storage.objects for update using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
 
--- Chat Images Policies
-drop policy if exists "Chat images are publicly accessible" on storage.objects;
-create policy "Chat images are publicly accessible" on storage.objects for select using (bucket_id = 'chat-images');
+  -- Chat Images Policies
+  drop policy if exists "Chat images are publicly accessible" on storage.objects;
+  create policy "Chat images are publicly accessible" on storage.objects for select using (bucket_id = 'chat-images');
 
-drop policy if exists "Authenticated users can upload chat images" on storage.objects;
-create policy "Authenticated users can upload chat images" on storage.objects for insert with check (bucket_id = 'chat-images' and auth.role() = 'authenticated');
+  drop policy if exists "Authenticated users can upload chat images" on storage.objects;
+  create policy "Authenticated users can upload chat images" on storage.objects for insert with check (bucket_id = 'chat-images' and auth.role() = 'authenticated');
+
+  -- Post Media Policies
+  drop policy if exists "Post media is publicly accessible" on storage.objects;
+  create policy "Post media is publicly accessible" on storage.objects for select using (bucket_id = 'post-media');
+
+  drop policy if exists "Admins can upload post media" on storage.objects;
+  create policy "Admins can upload post media" on storage.objects for insert with check (
+    bucket_id = 'post-media' 
+    and exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+  );
+
+  drop policy if exists "Admins can update post media" on storage.objects;
+  create policy "Admins can update post media" on storage.objects for update using (
+    bucket_id = 'post-media' 
+    and exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+  );
+
+  drop policy if exists "Admins can delete post media" on storage.objects;
+  create policy "Admins can delete post media" on storage.objects for delete using (
+    bucket_id = 'post-media' 
+    and exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+  );
 
 -- 4. RLS POLICIES (PUBLIC TABLES)
 do $$ begin
@@ -369,7 +411,15 @@ do $$ begin
   create policy "Users manage own custom lessons" on custom_lessons for all using (auth.uid() = user_id);
   
   drop policy if exists "Admins manage everything on custom lessons" on custom_lessons;
+  drop policy if exists "Admins manage everything on custom lessons" on custom_lessons;
   create policy "Admins manage everything on custom lessons" on custom_lessons for all using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+
+  -- Posts Policies
+  drop policy if exists "Posts are viewable by everyone" on posts;
+  create policy "Posts are viewable by everyone" on posts for select using (true);
+
+  drop policy if exists "Admins can manage posts" on posts;
+  create policy "Admins can manage posts" on posts for all using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
 
 end $$;
 
