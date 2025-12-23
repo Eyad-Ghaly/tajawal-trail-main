@@ -56,79 +56,8 @@ const Profile = () => {
         .eq("id", userId)
         .single();
 
-      // --- Dynamic Progress Calculation (Synced with Dashboard) ---
-
-      // 1. Fetch all published lessons & user's completed lessons
-      const { data: allLessons } = await supabase
-        .from("lessons")
-        .select("id, track_type")
-        .eq("published", true);
-
-      const { data: allUserLessons } = await supabase
-        .from("user_lessons")
-        .select("lesson_id")
-        .eq("user_id", userId)
-        .eq("watched", true);
-
-      // 2. Calculate progress per track
-      const tracks = ["data", "english", "soft"];
-      const progressStats: Record<string, number> = {};
-
-      tracks.forEach(track => {
-        const trackLessons = allLessons?.filter(l => l.track_type === track) || [];
-        const totalLessons = trackLessons.length;
-
-        if (totalLessons === 0) {
-          progressStats[`${track}_progress`] = 0;
-        } else {
-          const completedLessons = allUserLessons?.filter(ul =>
-            trackLessons.some(tl => tl.id === ul.lesson_id)
-          ).length || 0;
-          progressStats[`${track}_progress`] = (completedLessons / totalLessons) * 100;
-        }
-      });
-
-      // 3. Task Progress Calculation
-      const { data: allTasks } = await supabase
-        .from("tasks")
-        .select("*")
-        .eq("published", true);
-
-      const calcUserLevel = profileData?.level;
-      const relevantTasks = allTasks?.filter(task =>
-        !task.level || task.level === calcUserLevel
-      ) || [];
-
-      const { data: allUserInteractions } = await supabase
-        .from("user_tasks")
-        .select("task_id, status")
-        .eq("user_id", userId);
-
-      const approvedIds = allUserInteractions?.filter(ut => ut.status === 'approved').map(ut => ut.task_id) || [];
-      const totalRelevantTasks = relevantTasks.length;
-      let taskProgress = 0;
-
-      if (totalRelevantTasks > 0) {
-        const completedTaskCount = approvedIds.filter(id =>
-          relevantTasks.some(t => t.id === id)
-        ).length;
-        taskProgress = (completedTaskCount / totalRelevantTasks) * 100;
-      }
-
-      // 4. Overall Progress (50/50)
-      let totalTrackProgress = 0;
-      tracks.forEach(track => {
-        totalTrackProgress += progressStats[`${track}_progress`] || 0;
-      });
-      const avgTrackProgress = totalTrackProgress / tracks.length;
-      const overallProgress = (avgTrackProgress * 0.5) + (taskProgress * 0.5);
-
-      // Merge calculated stats into profile data
-      setProfile({
-        ...profileData,
-        ...progressStats,
-        overall_progress: overallProgress
-      });
+      // --- Using Server-Synced Progress ---
+      setProfile(profileData);
 
       // Load activities
       const { data: activitiesData } = await supabase
