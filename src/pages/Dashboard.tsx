@@ -233,51 +233,30 @@ const Dashboard = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const today = new Date().toISOString().split('T')[0];
+      // Use RPC for atomic check-in (prevents race conditions and duplicate XP)
+      const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('perform_daily_checkin', {
+        uid: user.id
+      });
 
-      // Check if already checked in today (any task)
-      const { data: existing } = await supabase
-        .from("daily_checkin")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("date", today)
-        .maybeSingle();
+      if (rpcError) throw rpcError;
 
-      if (existing) {
+      const result = rpcData as { success: boolean, message: string };
+
+      if (!result.success) {
         toast({
-          title: "تم التسجيل مسبقاً",
+          title: "تنبيه",
           description: "لقد سجلت حضورك اليوم بالفعل",
           variant: "destructive",
         });
         return;
       }
 
-      // Create a single check-in for all tracks
-      // This grants 5 XP once and completes the streak requirements
-      await supabase
-        .from("daily_checkin")
-        .insert({
-          user_id: user.id,
-          date: today,
-          data_task: true,
-          lang_task: true,
-          soft_task: true,
-          xp_generated: 5,
-        });
-
-      // Update profile XP
-      await supabase
-        .from("profiles")
-        .update({
-          xp_total: (profile?.xp_total || 0) + 5,
-        })
-        .eq("id", user.id);
-
       toast({
-        title: "رائع! 🎉",
-        description: "حصلت على 5 XP من التسجيل اليومي السريع",
+        title: "تم التسجيل بنجاح!",
+        description: "حصلت على 5 نقاط خبرة (XP) إضافية لمتابعة تعلمك اليوم.",
       });
 
+      // Reload data to reflect changes
       loadData();
     } catch (error) {
       console.error("Error with daily checkin:", error);
