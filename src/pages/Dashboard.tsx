@@ -241,11 +241,14 @@ const Dashboard = () => {
       if (!user) return;
 
       const localDate = getLocalDate();
-      console.log('🔍 Debug Info:', {
+
+      // Enhanced logging
+      console.log('🔍 Check-in Debug Info:', {
         localDate,
         userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         browserTime: new Date().toLocaleString(),
-        utcTime: new Date().toISOString()
+        utcTime: new Date().toISOString(),
+        userId: user.id
       });
 
       // Use RPC for atomic check-in (prevents race conditions and duplicate XP)
@@ -256,11 +259,15 @@ const Dashboard = () => {
 
       console.log('📡 RPC Response:', { rpcData, rpcError });
 
-      if (rpcError) throw rpcError;
+      if (rpcError) {
+        console.error('❌ RPC Error:', rpcError);
+        throw rpcError;
+      }
 
       const result = rpcData as { success: boolean, message: string };
 
       if (!result.success) {
+        console.warn('⚠️ Check-in failed:', result.message);
         toast({
           title: "تنبيه",
           description: "لقد سجلت حضورك اليوم بالفعل",
@@ -268,6 +275,7 @@ const Dashboard = () => {
         });
         return;
       }
+
 
       toast({
         title: "تم التسجيل بنجاح!",

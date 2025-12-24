@@ -671,8 +671,7 @@ EXCEPTION
 END;
 $$;
 
--- Grant permission to authenticated users (both old and new signatures)
-GRANT EXECUTE ON FUNCTION public.perform_daily_checkin(UUID) TO authenticated;
+-- Grant permission to authenticated users
 GRANT EXECUTE ON FUNCTION public.perform_daily_checkin(UUID, DATE) TO authenticated;
 
 -- 7. PROGRESS SYNCHRONIZATION
@@ -878,3 +877,114 @@ END $$;
 
 -- 8. RELOAD SCHEMA CACHE
 NOTIFY pgrst, 'reload config';
+
+-- ==========================================
+-- 9. VERIFICATION & DEBUGGING SECTION
+-- ==========================================
+-- Use these queries to verify setup and diagnose issues
+-- IMPORTANT: These queries are commented out. Uncomment and run them manually after the main script completes.
+
+-- 9.1 Verify Daily Check-in Function Signature
+-- This should show that the function accepts (uuid, date) parameters
+/*
+SELECT 
+    routine_name,
+    string_agg(
+        parameter_name || ' ' || data_type, 
+        ', ' 
+        ORDER BY ordinal_position
+    ) as signature
+FROM information_schema.parameters
+WHERE specific_schema = 'public' 
+AND routine_name = 'perform_daily_checkin'
+GROUP BY routine_name;
+*/
+
+-- 9.2 Check Admin User Setup
+-- Verify that eiadmokhtar67@gmail.com is set up as admin
+/*
+SELECT 
+    p.id,
+    p.full_name,
+    p.email,
+    p.role,
+    p.status,
+    au.email_confirmed_at
+FROM public.profiles p
+JOIN auth.users au ON p.id = au.id
+WHERE p.email = 'eiadmokhtar67@gmail.com';
+*/
+
+-- 9.3 View Recent Check-ins (Replace YOUR_USER_ID with actual user ID)
+-- Uncomment and replace YOUR_USER_ID to check your check-in history
+/*
+SELECT 
+    id,
+    user_id,
+    date,
+    data_task,
+    lang_task,
+    soft_task,
+    xp_generated,
+    created_at,
+    CURRENT_DATE as server_current_date,
+    CURRENT_TIMESTAMP AT TIME ZONE 'UTC' as server_utc_time
+FROM public.daily_checkin
+WHERE user_id = 'YOUR_USER_ID'  -- Replace with your user ID
+ORDER BY date DESC
+LIMIT 10;
+*/
+
+-- 9.4 Delete Today's Check-in for Testing (OPTIONAL - USE WITH CAUTION)
+-- Uncomment ONLY if you need to test check-in again today
+/*
+DELETE FROM public.daily_checkin 
+WHERE user_id = 'YOUR_USER_ID'  -- Replace with your user ID
+AND date = CURRENT_DATE;  -- Or specify exact date like '2025-12-24'
+*/
+
+-- 9.5 Test Check-in Function Manually
+-- Uncomment and replace YOUR_USER_ID to test the function
+/*
+SELECT public.perform_daily_checkin(
+    'YOUR_USER_ID'::uuid,
+    CURRENT_DATE  -- Or specify exact date like '2025-12-24'::date
+);
+*/
+
+-- 9.6 Check All Tables Were Created Successfully
+-- Uncomment to verify all tables exist
+/*
+SELECT 
+    table_name,
+    (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = t.table_name) as column_count
+FROM information_schema.tables t
+WHERE table_schema = 'public'
+AND table_type = 'BASE TABLE'
+ORDER BY table_name;
+*/
+
+-- 9.7 Verify RLS is Enabled on All Tables
+-- Uncomment to check RLS status
+/*
+SELECT 
+    schemaname,
+    tablename,
+    rowsecurity as rls_enabled
+FROM pg_tables
+WHERE schemaname = 'public'
+ORDER BY tablename;
+*/
+
+-- ==========================================
+-- END OF ULTIMATE_FRESH_START SCRIPT
+-- ==========================================
+-- All setup complete! Your Tajawal Trail database is ready.
+-- 
+-- NEXT STEPS:
+-- 1. Uncomment and run queries in section 9 above to verify everything is set up correctly
+-- 2. Log in with eiadmokhtar67@gmail.com / dida3/2/2001#
+-- 3. Check the Admin panel to confirm admin access
+-- 4. Test daily check-in functionality
+-- ==========================================
+
