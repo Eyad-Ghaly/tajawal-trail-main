@@ -240,11 +240,21 @@ const Dashboard = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      const localDate = getLocalDate();
+      console.log('🔍 Debug Info:', {
+        localDate,
+        userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        browserTime: new Date().toLocaleString(),
+        utcTime: new Date().toISOString()
+      });
+
       // Use RPC for atomic check-in (prevents race conditions and duplicate XP)
       const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('perform_daily_checkin', {
         uid: user.id,
-        checkin_date: getLocalDate()
+        checkin_date: localDate
       });
+
+      console.log('📡 RPC Response:', { rpcData, rpcError });
 
       if (rpcError) throw rpcError;
 
@@ -268,6 +278,11 @@ const Dashboard = () => {
       loadData();
     } catch (error) {
       console.error("Error with daily checkin:", error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء التسجيل. يرجى المحاولة مرة أخرى.",
+        variant: "destructive",
+      });
     }
   };
 

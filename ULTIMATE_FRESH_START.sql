@@ -630,6 +630,10 @@ create trigger on_daily_checkin_update
   after insert or update on public.daily_checkin
   for each row execute procedure public.handle_streak_update();
 
+-- Drop existing function versions to ensure clean recreation
+DROP FUNCTION IF EXISTS public.perform_daily_checkin(UUID);
+DROP FUNCTION IF EXISTS public.perform_daily_checkin(UUID, DATE);
+
 -- Create a function to perform atomic daily check-in (supports local date)
 CREATE OR REPLACE FUNCTION public.perform_daily_checkin(uid UUID, checkin_date DATE DEFAULT CURRENT_DATE)
 RETURNS JSONB
