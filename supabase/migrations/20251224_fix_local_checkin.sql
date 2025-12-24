@@ -1,4 +1,7 @@
--- Create a function to perform atomic daily check-in (supports local date)
+-- Fix Daily Check-in to use Local Date
+-- Run this in your Supabase SQL Editor
+
+-- Update the perform_daily_checkin function to accept local date parameter
 CREATE OR REPLACE FUNCTION public.perform_daily_checkin(uid UUID, checkin_date DATE DEFAULT CURRENT_DATE)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -36,4 +39,5 @@ END;
 $$;
 
 -- Grant permission to authenticated users
+GRANT EXECUTE ON FUNCTION public.perform_daily_checkin(UUID, DATE) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.perform_daily_checkin(UUID) TO authenticated;

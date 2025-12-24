@@ -667,8 +667,9 @@ EXCEPTION
 END;
 $$;
 
--- Grant permission to authenticated users
+-- Grant permission to authenticated users (both old and new signatures)
 GRANT EXECUTE ON FUNCTION public.perform_daily_checkin(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.perform_daily_checkin(UUID, DATE) TO authenticated;
 
 -- 7. PROGRESS SYNCHRONIZATION
 -- Function to refresh progress stats for a specific user
