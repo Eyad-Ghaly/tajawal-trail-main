@@ -630,14 +630,14 @@ create trigger on_daily_checkin_update
   after insert or update on public.daily_checkin
   for each row execute procedure public.handle_streak_update();
 
--- Create a function to perform atomic daily check-in
-CREATE OR REPLACE FUNCTION public.perform_daily_checkin(uid UUID)
+-- Create a function to perform atomic daily check-in (supports local date)
+CREATE OR REPLACE FUNCTION public.perform_daily_checkin(uid UUID, checkin_date DATE DEFAULT CURRENT_DATE)
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-    today_val DATE := CURRENT_DATE;
+    today_val DATE := checkin_date;
     existing_id UUID;
 BEGIN
     -- Check if already checked in today

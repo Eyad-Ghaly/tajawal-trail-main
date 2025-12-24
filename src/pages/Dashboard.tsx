@@ -40,12 +40,19 @@ const Dashboard = () => {
     loadData();
   }, []);
 
+  const getLocalDate = () => {
+    const now = new Date();
+    const offset = now.getTimezoneOffset();
+    const localDate = new Date(now.getTime() - (offset * 60 * 1000));
+    return localDate.toISOString().split('T')[0];
+  };
+
   const loadData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = getLocalDate();
 
       // Load profile
       const { data: profileData } = await supabase
@@ -235,7 +242,8 @@ const Dashboard = () => {
 
       // Use RPC for atomic check-in (prevents race conditions and duplicate XP)
       const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('perform_daily_checkin', {
-        uid: user.id
+        uid: user.id,
+        checkin_date: getLocalDate()
       });
 
       if (rpcError) throw rpcError;
