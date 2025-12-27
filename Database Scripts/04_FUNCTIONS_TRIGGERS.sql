@@ -116,37 +116,38 @@ create trigger on_daily_checkin_update after insert or update on public.daily_ch
 
 -- 5. DAILY CHECKIN FUNCTION
 -- 5. DAILY CHECKIN FUNCTION
--- Dropping old valid signature to replace with new one
 DROP FUNCTION IF EXISTS public.perform_daily_checkin(UUID, DATE);
+DROP FUNCTION IF EXISTS public.perform_daily_checkin(UUID, TEXT, DATE);
 
 CREATE OR REPLACE FUNCTION public.perform_daily_checkin(uid UUID, target_track TEXT, checkin_date DATE DEFAULT CURRENT_DATE)
 RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
     today_val DATE := checkin_date;
-    existing_record RECORD;
-    col_name TEXT;
-    already_done BOOLEAN;
+    existing_record public.daily_checkin;
+    is_done BOOLEAN;
 BEGIN
-    -- Determine which column to update
-    CASE target_track
-        WHEN 'data' THEN col_name := 'data_task';
-        WHEN 'lang' THEN col_name := 'lang_task';
-        WHEN 'soft' THEN col_name := 'soft_task';
-        ELSE RETURN jsonb_build_object('success', false, 'message', 'Invalid track type');
-    END CASE;
-
-    -- Check if record exists
     SELECT * INTO existing_record FROM public.daily_checkin WHERE user_id = uid AND date = today_val;
 
     IF existing_record IS NOT NULL THEN
-        -- Check if specific task is already done
-        EXECUTE format('SELECT ($1).%I', col_name) USING existing_record INTO already_done;
-        
-        IF already_done THEN
-            RETURN jsonb_build_object('success', false, 'message', 'Already checked in for this track');
+        -- Check specific column based on track
+        CASE target_track
+            WHEN 'data' THEN is_done := existing_record.data_task;
+            WHEN 'lang' THEN is_done := existing_record.lang_task;
+            WHEN 'soft' THEN is_done := existing_record.soft_task;
+            ELSE RETURN jsonb_build_object('success', false, 'message', 'Invalid track type');
+        END CASE;
+
+        IF is_done THEN
+            RETURN jsonb_build_object('success', false, 'message', 'This track is already completed for today');
         ELSE
             -- Update specific column
-            EXECUTE format('UPDATE public.daily_checkin SET %I = true, xp_generated = xp_generated + 5 WHERE id = $1', col_name) USING existing_record.id;
+            IF target_track = 'data' THEN
+                 UPDATE public.daily_checkin SET data_task = true, xp_generated = xp_generated + 5 WHERE id = existing_record.id;
+            ELSIF target_track = 'lang' THEN
+                 UPDATE public.daily_checkin SET lang_task = true, xp_generated = xp_generated + 5 WHERE id = existing_record.id;
+            ELSIF target_track = 'soft' THEN
+                 UPDATE public.daily_checkin SET soft_task = true, xp_generated = xp_generated + 5 WHERE id = existing_record.id;
+            END IF;
             
             -- Increment Profile XP
             UPDATE public.profiles SET xp_total = COALESCE(xp_total, 0) + 5 WHERE id = uid;
@@ -155,7 +156,15 @@ BEGIN
         END IF;
     ELSE
         -- Insert new row with specific task = true
-        EXECUTE format('INSERT INTO public.daily_checkin (user_id, date, %I, xp_generated) VALUES ($1, $2, true, 5)', col_name) USING uid, today_val;
+        IF target_track = 'data' THEN
+            INSERT INTO public.daily_checkin (user_id, date, data_task, xp_generated) VALUES (uid, today_val, true, 5);
+        ELSIF target_track = 'lang' THEN
+             INSERT INTO public.daily_checkin (user_id, date, lang_task, xp_generated) VALUES (uid, today_val, true, 5);
+        ELSIF target_track = 'soft' THEN
+             INSERT INTO public.daily_checkin (user_id, date, soft_task, xp_generated) VALUES (uid, today_val, true, 5);
+        ELSE
+             RETURN jsonb_build_object('success', false, 'message', 'Invalid track type');
+        END IF;
 
         -- Increment Profile XP
         UPDATE public.profiles SET xp_total = COALESCE(xp_total, 0) + 5 WHERE id = uid;

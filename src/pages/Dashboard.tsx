@@ -272,7 +272,7 @@ const Dashboard = () => {
         console.warn('⚠️ Check-in failed:', result.message);
         toast({
           title: "تنبيه",
-          description: "لقد سجلت حضورك اليوم بالفعل",
+          description: result.message || "لقد سجلت حضورك اليوم بالفعل",
           variant: "destructive",
         });
         return;
