@@ -252,8 +252,10 @@ const Dashboard = () => {
       });
 
       // Use RPC for atomic check-in (prevents race conditions and duplicate XP)
+      // Use RPC for atomic check-in (prevents race conditions and duplicate XP)
       const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('perform_daily_checkin', {
         uid: user.id,
+        target_track: trackType,
         checkin_date: localDate
       });
 
@@ -511,14 +513,14 @@ const Dashboard = () => {
             <div className="grid gap-3 md:grid-cols-3">
               <Button
                 variant="outline"
-                className={`h-20 flex-col gap-2 relative ${todayCheckin
+                className={`h-20 flex-col gap-2 relative ${todayCheckin?.data_task
                   ? "border-success bg-success/10"
                   : "hover:border-primary hover:bg-primary/5"
                   }`}
                 onClick={() => handleDailyCheckin("data")}
-                disabled={!!todayCheckin}
+                disabled={!!todayCheckin?.data_task}
               >
-                {todayCheckin && (
+                {todayCheckin?.data_task && (
                   <CheckCircle2 className="h-5 w-5 text-success absolute top-2 right-2" />
                 )}
                 <Brain className="h-6 w-6 text-primary" />
@@ -526,14 +528,14 @@ const Dashboard = () => {
               </Button>
               <Button
                 variant="outline"
-                className={`h-20 flex-col gap-2 relative ${todayCheckin
+                className={`h-20 flex-col gap-2 relative ${todayCheckin?.lang_task
                   ? "border-success bg-success/10"
                   : "hover:border-secondary hover:bg-secondary/5"
                   }`}
                 onClick={() => handleDailyCheckin("lang")}
-                disabled={!!todayCheckin}
+                disabled={!!todayCheckin?.lang_task}
               >
-                {todayCheckin && (
+                {todayCheckin?.lang_task && (
                   <CheckCircle2 className="h-5 w-5 text-success absolute top-2 right-2" />
                 )}
                 <Globe className="h-6 w-6 text-secondary" />
@@ -541,14 +543,14 @@ const Dashboard = () => {
               </Button>
               <Button
                 variant="outline"
-                className={`h-20 flex-col gap-2 relative ${todayCheckin
+                className={`h-20 flex-col gap-2 relative ${todayCheckin?.soft_task
                   ? "border-success bg-success/10"
                   : "hover:border-success hover:bg-success/5"
                   }`}
                 onClick={() => handleDailyCheckin("soft")}
-                disabled={!!todayCheckin}
+                disabled={!!todayCheckin?.soft_task}
               >
-                {todayCheckin && (
+                {todayCheckin?.soft_task && (
                   <CheckCircle2 className="h-5 w-5 text-success absolute top-2 right-2" />
                 )}
                 <Users className="h-6 w-6 text-success" />
