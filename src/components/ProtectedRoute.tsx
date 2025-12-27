@@ -48,22 +48,14 @@ export const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRout
   };
 
   const checkUserRole = async (userId: string) => {
-    // Fetch profile status
+    // Fetch profile status and role
     const { data: profileData } = await supabase
       .from("profiles")
-      .select("status")
+      .select("status, role")
       .eq("id", userId)
       .single();
 
-    // Check if user has admin role from user_roles table
-    const { data: roleData } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .eq("role", "admin")
-      .maybeSingle();
-
-    setIsAdmin(!!roleData);
+    setIsAdmin(profileData?.role === 'admin');
     setStatus(profileData?.status || null);
   };
 
@@ -99,7 +91,7 @@ export const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRout
               حسابك قيد المراجعة
             </CardTitle>
             <CardDescription className="text-base">
-            شكراً لتسجيلك في المنصة. حسابك معلق حالياً وسيتم مراجعته من قبل الإدارة قريباً يمكنك الواصل على الرقم 01124898339 وتجربة التسجيل بعد 5 دقائق.
+              شكراً لتسجيلك في المنصة. حسابك معلق حالياً وسيتم مراجعته من قبل الإدارة قريباً يمكنك الواصل على الرقم 01124898339 وتجربة التسجيل بعد 5 دقائق.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

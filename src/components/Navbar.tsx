@@ -43,19 +43,13 @@ export const Navbar = () => {
       // Fetch profile data
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("full_name, avatar_url")
+        .select("full_name, avatar_url, role")
         .eq("id", user.id)
         .single();
       setProfile(profileData);
 
-      // Check if user has admin role from user_roles table
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-      setIsAdmin(!!roleData);
+      // Check if user has admin role directly from profile
+      setIsAdmin(profileData?.role === 'admin');
     }
   };
 
