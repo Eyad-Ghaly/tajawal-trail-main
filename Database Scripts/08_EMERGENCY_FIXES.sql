@@ -19,3 +19,15 @@ END $$;
 --   data_progress = 0, english_progress = 0, soft_progress = 0, 
 --   streak_days = 0 
 -- WHERE email = 'user@example.com';
+
+-- 3. FORCE RECALCULATE ALL PROGRESS
+-- Run this to update the progress bars for ALL users based on their current history.
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN SELECT id FROM public.profiles LOOP
+    PERFORM public.refresh_user_progress(r.id);
+  END LOOP;
+END $$;
+

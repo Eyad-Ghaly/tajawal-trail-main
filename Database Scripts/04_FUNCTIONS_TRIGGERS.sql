@@ -95,15 +95,26 @@ declare
   last_date date;
 begin
   is_all_done := (new.data_task = true AND new.lang_task = true AND new.soft_task = true);
-  if is_all_done then
-    select streak_days, last_streak_date into current_streak, last_date from public.profiles where id = new.user_id;
-    if current_streak is null then current_streak := 0; end if;
+  
+  select streak_days, last_streak_date into current_streak, last_date from public.profiles where id = new.user_id;
+  if current_streak is null then current_streak := 0; end if;
 
+  -- 1. LAZY RESET: If last streak was older than yesterday, reset to 0 immediately on any activity
+  IF last_date IS NOT NULL AND last_date < (new.date - 1) THEN
+     update public.profiles set streak_days = 0 where id = new.user_id;
+     current_streak := 0; -- Local update for logic below
+  END IF;
+
+  -- 2. HANDLE COMPLETION
+  if is_all_done then
     if last_date = new.date then
+      -- Already counted for today
       return new;
     elsif last_date = (new.date - 1) then
+       -- Seamless continuation
       update public.profiles set streak_days = current_streak + 1, last_streak_date = new.date where id = new.user_id;
     else
+      -- Start fresh (was 0 due to reset above, or just a gap)
       update public.profiles set streak_days = 1, last_streak_date = new.date where id = new.user_id;
     end if;
   end if;
