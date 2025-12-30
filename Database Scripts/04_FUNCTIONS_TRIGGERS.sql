@@ -181,33 +181,96 @@ GRANT EXECUTE ON FUNCTION public.perform_daily_checkin(UUID, TEXT, DATE) TO auth
 -- 6. PROGRESS SYNC
 CREATE OR REPLACE FUNCTION public.refresh_user_progress(uid UUID) RETURNS void AS $$
 DECLARE
-    -- Variable declarations for counting...
-    total_reg_data INTEGER := 0; comp_reg_data INTEGER := 0;
-    total_reg_eng INTEGER := 0; comp_reg_eng INTEGER := 0;
-    total_reg_soft INTEGER := 0; comp_reg_soft INTEGER := 0;
-    total_cust_data INTEGER := 0; comp_cust_data INTEGER := 0;
-    total_cust_eng INTEGER := 0; comp_cust_eng INTEGER := 0;
-    total_cust_soft INTEGER := 0; comp_cust_soft INTEGER := 0;
-    total_reg_tasks INTEGER := 0; comp_reg_tasks INTEGER := 0;
-    total_cust_tasks INTEGER := 0; comp_cust_tasks INTEGER := 0;
-    user_lvl user_level;
-    d_prog NUMERIC := 0; e_prog NUMERIC := 0; s_prog NUMERIC := 0; t_prog NUMERIC := 0; o_prog NUMERIC := 0;
+    -- Totals
+    total_data_lessons INTEGER := 0;
+    total_eng_lessons INTEGER := 0;
+    total_soft_lessons INTEGER := 0;
+    
+    total_data_tasks INTEGER := 0;
+    total_eng_tasks INTEGER := 0;
+    total_soft_tasks INTEGER := 0;
+
+    -- Completed
+    comp_data_lessons INTEGER := 0;
+    comp_eng_lessons INTEGER := 0;
+    comp_soft_lessons INTEGER := 0;
+
+    comp_data_tasks INTEGER := 0;
+    comp_eng_tasks INTEGER := 0;
+    comp_soft_tasks INTEGER := 0;
+    
+    -- Percentages
+    data_pct NUMERIC := 0;
+    eng_pct NUMERIC := 0;
+    soft_pct NUMERIC := 0;
+    overall_pct NUMERIC := 0;
 BEGIN
-    SELECT level INTO user_lvl FROM public.profiles WHERE id = uid;
-    IF user_lvl IS NULL THEN user_lvl := 'Beginner'; END IF;
+    -- Get Totals (Published only)
+    SELECT count(*) INTO total_data_lessons FROM public.lessons WHERE track_type = 'data' AND published = true;
+    SELECT count(*) INTO total_eng_lessons FROM public.lessons WHERE track_type = 'english' AND published = true;
+    SELECT count(*) INTO total_soft_lessons FROM public.lessons WHERE track_type = 'soft' AND published = true;
+    
+    SELECT count(*) INTO total_data_tasks FROM public.tasks WHERE track_type = 'data' AND published = true;
+    SELECT count(*) INTO total_eng_tasks FROM public.tasks WHERE track_type = 'english' AND published = true;
+    SELECT count(*) INTO total_soft_tasks FROM public.tasks WHERE track_type = 'soft' AND published = true;
 
-    -- Counters Logic (Simplified for brevity, same as ULTIMATE script)
-    SELECT count(*) INTO total_reg_data FROM public.lessons WHERE track_type = 'data' AND published = true;
-    SELECT count(*) INTO comp_reg_data FROM public.user_lessons ul JOIN public.lessons l ON ul.lesson_id = l.id WHERE ul.user_id = uid AND l.track_type = 'data' AND ul.watched = true;
-    -- ... (Assume all other counters logic remains identical) ...
+    -- Get Completed (Watched lessons / Approved tasks)
+    SELECT count(*) INTO comp_data_lessons 
+    FROM public.user_lessons ul 
+    JOIN public.lessons l ON ul.lesson_id = l.id 
+    WHERE ul.user_id = uid AND l.track_type = 'data' AND ul.watched = true;
 
-    -- Calculation logic...
+    SELECT count(*) INTO comp_eng_lessons 
+    FROM public.user_lessons ul 
+    JOIN public.lessons l ON ul.lesson_id = l.id 
+    WHERE ul.user_id = uid AND l.track_type = 'english' AND ul.watched = true;
+    
+    SELECT count(*) INTO comp_soft_lessons 
+    FROM public.user_lessons ul 
+    JOIN public.lessons l ON ul.lesson_id = l.id 
+    WHERE ul.user_id = uid AND l.track_type = 'soft' AND ul.watched = true;
+
+    SELECT count(*) INTO comp_data_tasks
+    FROM public.user_tasks ut
+    JOIN public.tasks t ON ut.task_id = t.id
+    WHERE ut.user_id = uid AND t.track_type = 'data' AND ut.status = 'approved';
+
+    SELECT count(*) INTO comp_eng_tasks
+    FROM public.user_tasks ut
+    JOIN public.tasks t ON ut.task_id = t.id
+    WHERE ut.user_id = uid AND t.track_type = 'english' AND ut.status = 'approved';
+    
+    SELECT count(*) INTO comp_soft_tasks
+    FROM public.user_tasks ut
+    JOIN public.tasks t ON ut.task_id = t.id
+    WHERE ut.user_id = uid AND t.track_type = 'soft' AND ut.status = 'approved';
+
+    -- Calculate Percentages (Avoid Division by Zero)
+    IF (total_data_lessons + total_data_tasks) > 0 THEN
+        data_pct := ((comp_data_lessons + comp_data_tasks)::NUMERIC / (total_data_lessons + total_data_tasks)::NUMERIC) * 100;
+    END IF;
+
+    IF (total_eng_lessons + total_eng_tasks) > 0 THEN
+        eng_pct := ((comp_eng_lessons + comp_eng_tasks)::NUMERIC / (total_eng_lessons + total_eng_tasks)::NUMERIC) * 100;
+    END IF;
+
+    IF (total_soft_lessons + total_soft_tasks) > 0 THEN
+        soft_pct := ((comp_soft_lessons + comp_soft_tasks)::NUMERIC / (total_soft_lessons + total_soft_tasks)::NUMERIC) * 100;
+    END IF;
+
+    -- Overall Average
+    overall_pct := (data_pct + eng_pct + soft_pct) / 3;
+
     -- Update Profile
     UPDATE public.profiles
-    SET data_progress = 0, english_progress = 0, soft_progress = 0, overall_progress = 0, updated_at = now()
+    SET 
+        data_progress = round(data_pct),
+        english_progress = round(eng_pct),
+        soft_progress = round(soft_pct),
+        overall_progress = round(overall_pct),
+        updated_at = now()
     WHERE id = uid;
-    -- Note: Actual calculation logic is complex, for this split I will keep the function definition generic or copy exact logic if strictly needed. 
-    -- *Self-correction*: I should put the full logic here.
+    
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
