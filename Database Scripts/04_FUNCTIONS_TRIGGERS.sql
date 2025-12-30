@@ -21,7 +21,7 @@ begin
   is_admin := (lower(new.email) = 'eiadmokhtar67@gmail.com');
   
   insert into public.profiles (
-    id, full_name, role, status, level, avatar_url, governorate, membership_number, email, phone_number,
+    id, full_name, role, status, level, english_level, avatar_url, governorate, membership_number, email, phone_number,
     xp_total, overall_progress, data_progress, english_progress, soft_progress, streak_days
   )
   values (
@@ -30,6 +30,7 @@ begin
     case when is_admin then 'admin'::app_role else 'learner'::app_role end,
     case when is_admin then 'approved' else 'pending' end,
     'Beginner',
+    'B',
     new.raw_user_meta_data->>'avatar_url',
     new.raw_user_meta_data->>'governorate',
     new.raw_user_meta_data->>'membership_number',

@@ -50,6 +50,7 @@ interface User {
   overall_progress?: number;
   streak_days?: number;
   level: "Beginner" | "Intermediate" | "Advanced" | null;
+  english_level?: "A" | "B" | "C";
   status: "pending" | "approved" | "rejected";
   role: "learner" | "admin";
   join_date: string;
@@ -238,161 +239,185 @@ const Admin = () => {
     } catch (error) {
       console.error("Error rejecting proof:", error);
     }
-  };
+    const handleLevelChange = async (userId: string, newLevel: "Beginner" | "Intermediate" | "Advanced") => {
+      try {
+        await supabase
+          .from("profiles")
+          .update({ level: newLevel })
+          .eq("id", userId);
 
-  const handleLevelChange = async (userId: string, newLevel: "Beginner" | "Intermediate" | "Advanced") => {
-    try {
-      await supabase
-        .from("profiles")
-        .update({ level: newLevel })
-        .eq("id", userId);
+        toast({
+          title: "تم التحديث ✅",
+          description: `تم تغيير المستوى العام إلى ${newLevel}`,
+        });
 
-      toast({
-        title: "تم التحديث ✅",
-        description: `تم تغيير المستوى إلى ${newLevel}`,
-      });
+        loadData();
+      } catch (error) {
+        console.error("Error updating level:", error);
+        toast({
+          title: "حدث خطأ",
+          variant: "destructive",
+        });
+      }
+    };
 
-      loadData();
-    } catch (error) {
-      console.error("Error updating level:", error);
-      toast({
-        title: "حدث خطأ",
-        variant: "destructive",
-      });
-    }
-  };
+    const handleEnglishLevelChange = async (userId: string, newLevel: "A" | "B" | "C") => {
+      try {
+        await supabase
+          .from("profiles")
+          .update({ english_level: newLevel })
+          .eq("id", userId);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "approved": return "bg-success text-white";
-      case "submitted": return "bg-info text-white";
-      case "rejected": return "bg-destructive text-white";
-      default: return "bg-warning text-white";
-    }
-  };
+        toast({
+          title: "تم التحديث ✅",
+          description: `تم تغيير مستوى اللغة إلى ${newLevel}`,
+        });
 
-  const getLevelColor = (level: string) => {
-    switch (level) {
-      case "Advanced": return "text-success";
-      case "Intermediate": return "text-info";
-      default: return "text-warning";
-    }
-  };
+        loadData();
+      } catch (error) {
+        console.error("Error updating english level:", error);
+        toast({
+          title: "حدث خطأ",
+          variant: "destructive",
+        });
+      }
+    };
 
-  const handleLessonLevelChange = async (lessonId: string, newLevel: "Beginner" | "Intermediate" | "Advanced" | null) => {
-    try {
-      await supabase
-        .from("lessons")
-        .update({ level: newLevel })
-        .eq("id", lessonId);
+    const getStatusColor = (status: string) => {
+      switch (status) {
+        case "approved": return "bg-success text-white";
+        case "submitted": return "bg-info text-white";
+        case "rejected": return "bg-destructive text-white";
+        default: return "bg-warning text-white";
+      }
+    };
 
-      toast({
-        title: "تم التحديث ✅",
-        description: `تم تغيير مستوى الدرس`,
-      });
+    const getLevelColor = (level: string) => {
+      switch (level) {
+        case "Advanced": return "text-success";
+        case "Intermediate": return "text-info";
+        default: return "text-warning";
+      }
+    };
 
-      loadData();
-    } catch (error) {
-      console.error("Error updating lesson level:", error);
-      toast({
-        title: "حدث خطأ",
-        variant: "destructive",
-      });
-    }
-  };
+    const handleLessonLevelChange = async (lessonId: string, newLevel: "Beginner" | "Intermediate" | "Advanced" | null) => {
+      try {
+        await supabase
+          .from("lessons")
+          .update({ level: newLevel })
+          .eq("id", lessonId);
 
-  const handleTaskLevelChange = async (taskId: string, newLevel: "Beginner" | "Intermediate" | "Advanced" | null) => {
-    try {
-      await supabase
-        .from("tasks")
-        .update({ level: newLevel })
-        .eq("id", taskId);
+        toast({
+          title: "تم التحديث ✅",
+          description: `تم تغيير مستوى الدرس`,
+        });
 
-      toast({
-        title: "تم التحديث ✅",
-        description: `تم تغيير مستوى المهمة`,
-      });
+        loadData();
+      } catch (error) {
+        console.error("Error updating lesson level:", error);
+        toast({
+          title: "حدث خطأ",
+          variant: "destructive",
+        });
+      }
+    };
 
-      loadData();
-    } catch (error) {
-      console.error("Error updating task level:", error);
-      toast({
-        title: "حدث خطأ",
-        variant: "destructive",
-      });
-    }
-  };
+    const handleTaskLevelChange = async (taskId: string, newLevel: "Beginner" | "Intermediate" | "Advanced" | null) => {
+      try {
+        await supabase
+          .from("tasks")
+          .update({ level: newLevel })
+          .eq("id", taskId);
 
-  const getTrackLabel = (trackType: string) => {
-    switch (trackType) {
-      case "data": return "تحليل البيانات";
-      case "english": return "اللغة الإنجليزية";
-      case "soft": return "المهارات الحياتية";
-      default: return trackType;
-    }
-  };
+        toast({
+          title: "تم التحديث ✅",
+          description: `تم تغيير مستوى المهمة`,
+        });
 
-  const handleApproveUser = async (userId: string, level: "Beginner" | "Intermediate" | "Advanced") => {
-    try {
-      await supabase
-        .from("profiles")
-        .update({ status: "approved", level: level })
-        .eq("id", userId);
+        loadData();
+      } catch (error) {
+        console.error("Error updating task level:", error);
+        toast({
+          title: "حدث خطأ",
+          variant: "destructive",
+        });
+      }
+    };
 
-      toast({
-        title: "تم قبول المستخدم ✅",
-        description: `تم تفعيل الحساب وتحديد المستوى`,
-      });
+    const getTrackLabel = (trackType: string) => {
+      switch (trackType) {
+        case "data": return "تحليل البيانات";
+        case "english": return "اللغة الإنجليزية";
+        case "soft": return "المهارات الحياتية";
+        default: return trackType;
+      }
+    };
 
-      loadData();
-    } catch (error) {
-      console.error("Error approving user:", error);
-      toast({
-        title: "حدث خطأ",
-        variant: "destructive",
-      });
-    }
-  };
+    const handleApproveUser = async (userId: string, generalLevel: string, englishLevel: string) => {
+      try {
+        await supabase
+          .from("profiles")
+          .update({
+            status: "approved",
+            level: generalLevel,
+            english_level: englishLevel
+          } as any)
+          .eq("id", userId);
 
-  const handleRejectUser = async (userId: string) => {
-    try {
-      await supabase
-        .from("profiles")
-        .update({ status: "rejected" })
-        .eq("id", userId);
+        toast({
+          title: "تم قبول المستخدم ✅",
+          description: `تم تفعيل الحساب وتحديد المستويات`,
+        });
 
-      toast({
-        title: "تم رفض المستخدم",
-        variant: "destructive",
-      });
+        loadData();
+      } catch (error) {
+        console.error("Error approving user:", error);
+        toast({
+          title: "حدث خطأ",
+          variant: "destructive",
+        });
+      }
+    };
 
-      loadData();
-    } catch (error) {
-      console.error("Error rejecting user:", error);
-      toast({
-        title: "حدث خطأ",
-        variant: "destructive",
-      });
-    }
-  };
+    const handleRejectUser = async (userId: string) => {
+      try {
+        await supabase
+          .from("profiles")
+          .update({ status: "rejected" })
+          .eq("id", userId);
+
+        toast({
+          title: "تم رفض المستخدم",
+          variant: "destructive",
+        });
+
+        loadData();
+      } catch (error) {
+        console.error("Error rejecting user:", error);
+        toast({
+          title: "حدث خطأ",
+          variant: "destructive",
+        });
+      }
+    };
 
 
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="container py-8">
-          <div className="animate-pulse space-y-4">
-            <div className="h-32 bg-muted rounded-lg"></div>
-            <div className="h-64 bg-muted rounded-lg"></div>
+    if (loading) {
+      return (
+        <div className="min-h-screen bg-background">
+          <Navbar />
+          <div className="container py-8">
+            <div className="animate-pulse space-y-4">
+              <div className="h-32 bg-muted rounded-lg"></div>
+              <div className="h-64 bg-muted rounded-lg"></div>
+            </div>
           </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  return (
+    return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/5">
       <Navbar />
 
@@ -513,66 +538,69 @@ const Admin = () => {
                 ) : (
                   <div className="space-y-4">
                     {pendingUsers.map((user) => (
-                      <div
-                        key={user.id}
-                        className="border rounded-lg p-4 space-y-3 hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-start gap-3 flex-1">
-                            <Avatar>
-                              <AvatarImage src={user.avatar_url} />
-                              <AvatarFallback className="bg-primary text-primary-foreground">
-                                {user.full_name?.charAt(0)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <h4 className="font-medium">{user.full_name}</h4>
-                              <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                                {user.governorate && (
-                                  <div className="flex items-center gap-1">
-                                    <MapPin className="h-3 w-3" />
-                                    {user.governorate}
-                                  </div>
-                                )}
-                                {user.membership_number && (
-                                  <span>رقم العضوية: {user.membership_number}</span>
-                                )}
-                              </div>
-                              <div className="text-xs text-muted-foreground mt-1">
-                                {user.email && <div className="font-medium text-primary">البريد: {user.email}</div>}
-                                {user.phone_number && <div className="font-medium text-secondary">الهاتف: {user.phone_number}</div>}
-                                تاريخ التسجيل: {new Date(user.created_at).toLocaleDateString("ar-SA")}
-                              </div>
-                            </div>
                           </div>
                           <div className="flex flex-col gap-2">
-                            <div className="flex gap-2">
-                              <Select
-                                defaultValue="Beginner"
-                                onValueChange={(value: "Beginner" | "Intermediate" | "Advanced") =>
-                                  handleApproveUser(user.id, value)
+                             <div className="flex flex-col gap-2 p-2 border rounded bg-muted/20">
+                                <label className="text-xs font-semibold px-1">المستوى العام</label>
+                                <Select defaultValue="Beginner" onValueChange={(val) => {
+                                     // Store in a local temp state if needed, or just pass directly to approve function
+                                     // For simplicity here, we might need a small component or state wrapper for each row if we want complex independent selects.
+                                     // But to keep it simple, we can set it via default in the button or make a tiny component.
+                                     // Let's assume we approve with defaults or need a more complex UI.
+                                     // Refactoring: Let's make the approve button take current values.
+                                     // Since we can't easily store state for each row without extraction, 
+                                     // we will use a "Ref" or just allow default B/Beginner and let admin edit later, 
+                                     // OR implies we use a 'UserRow' component. 
+                                     // Given the constraints, let's keep it simple: defaulting to Beginner/B and user can edit later
+                                     // OR cleaner: Just adding the selects here but they won't persistently link without state. 
+                                     // *Pivot*: I will use a clearer UI where approving defaults to Beginner/B, but showing 2 selects is tricky without component extraction.
+                                     // Let's use a standard "Approve" that sets defaults, then they appear in Learners list to edit.
+                                     // OR, better: Just separate Approve actions? No, the user wants to choose.
+                                     // I will extract a small `PendingUserRow` component internal to this file to manage state? 
+                                     // No, file is too big. 
+                                     // I will implement a simpler approach: Two generic select boxes don't work well in a map without state.
+                                     // Strategy: Approve as specific levels using a combined dialog? 
+                                     // Strategy 2 (Simplest/Effective): Defaults (Beginner / B) are pre-selected in the call.
+                                     // Let's just hardcode the button to "Approve (Beginner / B)" for now to avoid breaking React rules, 
+                                     // OR implies I should create a sub-component. 
+                                     // I will create a sub-component `PendingUserRow` inside Admin.tsx or separate file?
+                                     // I'll stick to updating `Admin.tsx` but maybe I can't do the per-row state easily.
+                                     // Actually, I can just change the UI to have an "Admission" dialog that pops up when you click approve.
+                                     // That's best practice. But for speed:
+                                     // I'll just change the "Approve" button to open a small popover or just have fixed options?
+                                     // The user said: "When I accept him I will choose his level in both things".
+                                     // Okay, I will make `PendingUserItem` component inline or just add the selects and manage state? 
+                                     // I'll add `PendingUserItem` component at the bottom of the file and use it.
+                                  }}
+                                >
+                                </Select>
+                                {/* Re-thinking: I will just trust the user to edit levels in the 'Learners' tab after approval, 
+                                   OR I will provide a simple dual-select in the row if I extract it. 
+                                   Let's extract `PendingUserRow` to `src/components/admin/PendingUserRow.tsx`? 
+                                   No, I'll just add it to `Admin.tsx` if it's not too messy. 
+                                   Actually, the user already requested a specific flow.
+                                   Let's modify `handleApproveUser` to take arguments, and in the UI, we use a local state for the *currently being approved* user?
+                                   No, that blocks parallel approvals.
+                                   
+                                   Decision: I will modify the map to render a `PendingUserRow` component.
+                                   But I can't easily create a new file and import it in one step without breaking the build slightly if I'm not careful.
+                                   
+                                   Alternative: Just add `englishLevel` and `generalLevel` to the `pendingUsers` state? No.
+                                   
+                                   Let's go with: Add `PendingUserRow` component at the end of `Admin.tsx` and use it.
+                                */
                                 }
-                              >
-                                <SelectTrigger className="w-32">
-                                  <SelectValue placeholder="قبول كـ" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Beginner">قبول كمبتدئ</SelectItem>
-                                  <SelectItem value="Intermediate">قبول كمتوسط</SelectItem>
-                                  <SelectItem value="Advanced">قبول كمتقدم</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleRejectUser(user.id)}
-                                className="gap-2"
-                              >
-                                <UserX className="h-4 w-4" />
-                                رفض
-                              </Button>
-                            </div>
+                                {/* For now, I'll just hardcode the selects to use local state *inside* the map? No that's invalid. 
+                                    I will replace the list mapping with a separate component `PendingUserRow` defined in the same file for now.
+                                */}
+                             </div>
                           </div>
+                          {/* 
+                             I will skip complex inline replacement and instead just add English Level column to the Learners table 
+                             and for Pending users, I'll defaulting to Beginner/B. PROMPT SAID: "When I accept him I will choose his level".
+                             Okay, I will extract a component `PendingUserCard` in a separate file to handle the state.
+                          */}
+                          <PendingUserCard user={user} onApprove={handleApproveUser} onReject={handleRejectUser} />
                         </div>
                       </div>
                     ))}
@@ -623,21 +651,40 @@ const Admin = () => {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <Select
-                            value={learner.level}
-                            onValueChange={(value: "Beginner" | "Intermediate" | "Advanced") => handleLevelChange(learner.id, value)}
-                          >
-                            <SelectTrigger className="w-32">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Beginner">مبتدئ</SelectItem>
-                              <SelectItem value="Intermediate">متوسط</SelectItem>
-                              <SelectItem value="Advanced">متقدم</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          </div>
                         </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-2">
+                            <Select
+                              value={learner.level || "Beginner"}
+                              onValueChange={(value: "Beginner" | "Intermediate" | "Advanced") => handleLevelChange(learner.id, value)}
+                            >
+                              <SelectTrigger className="w-32 h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Beginner">عام: مبتدئ</SelectItem>
+                                <SelectItem value="Intermediate">عام: متوسط</SelectItem>
+                                <SelectItem value="Advanced">عام: متقدم</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            
+                            <Select
+                              value={learner.english_level || "B"}
+                              onValueChange={(value: "A" | "B" | "C") => handleEnglishLevelChange(learner.id, value)}
+                            >
+                              <SelectTrigger className="w-32 h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="A">إنجليزي: A</SelectItem>
+                                <SelectItem value="B">إنجليزي: B</SelectItem>
+                                <SelectItem value="C">إنجليزي: C</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </TableCell>
+                        <TableCell>
                         <TableCell>
                           <div className="space-y-1">
                             <div className="text-sm font-medium">
@@ -684,7 +731,7 @@ const Admin = () => {
                 </Table>
               </CardContent>
             </Card>
-          </TabsContent>
+          </TabsContent >
 
           <TabsContent value="proofs" className="space-y-4">
             <Card className="border-none shadow-lg">
@@ -903,7 +950,92 @@ const Admin = () => {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
+        </Tabs >
+      </div >
+    </div >
+  );
+};
+
+
+// Helper Component for Pending User Row to manage local state
+const PendingUserCard = ({ user, onApprove, onReject }: { user: User, onApprove: (id: string, general: string, english: string) => void, onReject: (id: string) => void }) => {
+  const [generalLevel, setGeneralLevel] = useState<string>("Beginner");
+  const [englishLevel, setEnglishLevel] = useState<string>("B");
+
+  return (
+    <div className="border rounded-lg p-4 space-y-3 hover:bg-muted/50 transition-colors">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3 flex-1">
+          <Avatar>
+            <AvatarImage src={user.avatar_url} />
+            <AvatarFallback className="bg-primary text-primary-foreground">
+              {user.full_name?.charAt(0)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <h4 className="font-medium">{user.full_name}</h4>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+              {user.governorate && (
+                <div className="flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {user.governorate}
+                </div>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {user.email && <div>{user.email}</div>}
+              تاريخ التسجيل: {new Date(user.created_at).toLocaleDateString("ar-SA")}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 items-end">
+          <div className="flex gap-2">
+            <div className="w-32">
+              <label className="text-[10px] text-muted-foreground px-1">المستوى العام</label>
+              <Select value={generalLevel} onValueChange={setGeneralLevel}>
+                <SelectTrigger className="h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Beginner">مبتدئ</SelectItem>
+                  <SelectItem value="Intermediate">متوسط</SelectItem>
+                  <SelectItem value="Advanced">متقدم</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-32">
+              <label className="text-[10px] text-muted-foreground px-1">اللغة</label>
+              <Select value={englishLevel} onValueChange={setEnglishLevel}>
+                <SelectTrigger className="h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="A">مستوى A</SelectItem>
+                  <SelectItem value="B">مستوى B</SelectItem>
+                  <SelectItem value="C">مستوى C</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex gap-2 mt-1">
+            <Button
+              size="sm"
+              className="w-full bg-green-600 hover:bg-green-700"
+              onClick={() => onApprove(user.id, generalLevel, englishLevel)}
+            >
+              <UserCheck className="h-4 w-4 mr-2" />
+              قبول
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => onReject(user.id)}
+            >
+              <UserX className="h-4 w-4 mr-2" />
+              رفض
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -35,6 +35,7 @@ export const GlobalTaskDialog = ({ onTaskAdded }: GlobalTaskDialogProps) => {
         resource_link: "",
         track_type: "data",
         level: "all",
+        english_level: "B",
         xp: 10,
     });
 
@@ -54,7 +55,8 @@ export const GlobalTaskDialog = ({ onTaskAdded }: GlobalTaskDialogProps) => {
             description: newTask.description || null,
             resource_link: newTask.resource_link || null,
             track_type: newTask.track_type,
-            level: newTask.level === "all" ? null : newTask.level,
+            level: newTask.track_type === 'english' ? null : (newTask.level === "all" ? null : newTask.level),
+            english_level: newTask.track_type === 'english' ? newTask.english_level : null,
             xp: newTask.xp,
             published: true,
         } as any);
@@ -75,6 +77,7 @@ export const GlobalTaskDialog = ({ onTaskAdded }: GlobalTaskDialogProps) => {
                 resource_link: "",
                 track_type: "data",
                 level: "all",
+                english_level: "B",
                 xp: 10,
             });
             setOpen(false);
@@ -138,21 +141,42 @@ export const GlobalTaskDialog = ({ onTaskAdded }: GlobalTaskDialogProps) => {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">المستوى</label>
-                            <Select
-                                value={newTask.level}
-                                onValueChange={(val) => setNewTask({ ...newTask, level: val })}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">كل المستويات</SelectItem>
-                                    <SelectItem value="Beginner">مبتدئ</SelectItem>
-                                    <SelectItem value="Intermediate">متوسط</SelectItem>
-                                    <SelectItem value="Advanced">متقدم</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            {newTask.track_type === 'english' ? (
+                                <>
+                                    <label className="text-sm font-medium">مستوى اللغة</label>
+                                    <Select
+                                        value={newTask.english_level}
+                                        onValueChange={(val) => setNewTask({ ...newTask, english_level: val })}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="A">مستوى A</SelectItem>
+                                            <SelectItem value="B">مستوى B</SelectItem>
+                                            <SelectItem value="C">مستوى C</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </>
+                            ) : (
+                                <>
+                                    <label className="text-sm font-medium">المستوى العام</label>
+                                    <Select
+                                        value={newTask.level}
+                                        onValueChange={(val) => setNewTask({ ...newTask, level: val })}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">كل المستويات</SelectItem>
+                                            <SelectItem value="Beginner">مبتدئ</SelectItem>
+                                            <SelectItem value="Intermediate">متوسط</SelectItem>
+                                            <SelectItem value="Advanced">متقدم</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </>
+                            )}
                         </div>
                     </div>
 

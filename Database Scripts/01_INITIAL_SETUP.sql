@@ -29,6 +29,10 @@ do $$ begin
   create type track_type_enum as enum ('data', 'english', 'soft', 'custom');
 exception when duplicate_object then null; end $$;
 
+do $$ begin
+  create type english_level_enum as enum ('A', 'B', 'C');
+exception when duplicate_object then null; end $$;
+
 -- 3. TABLES
 
 -- PROFILES
@@ -37,6 +41,7 @@ create table if not exists public.profiles (
   full_name text not null,
   avatar_url text,
   level user_level default 'Beginner',
+  english_level english_level_enum default 'B',
   role app_role default 'learner',
   xp_total integer default 0,
   overall_progress integer default 0,
@@ -63,7 +68,8 @@ select
   id,
   full_name,
   avatar_url,
-  level
+  level,
+  english_level
 from public.profiles;
 
 -- USER_ROLES
@@ -100,6 +106,7 @@ create table if not exists public.lessons (
   description text,
   track_type track_type_enum not null, 
   level user_level,
+  english_level english_level_enum,
   published boolean default false,
   order_index integer,
   video_link text,
@@ -115,6 +122,7 @@ create table if not exists public.tasks (
   description text,
   track_type track_type_enum not null, 
   level user_level,
+  english_level english_level_enum,
   xp integer default 10,
   published boolean default false,
   resource_link text,
