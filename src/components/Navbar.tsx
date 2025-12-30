@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, LayoutDashboard, User, Newspaper } from "lucide-react";
+import { LogOut, LayoutDashboard, User, Newspaper, Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -120,6 +120,17 @@ export const Navbar = () => {
               <Newspaper className="h-4 w-4" />
               المنشورات
             </Button>
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/leaderboard")}
+              className={cn(
+                "gap-2",
+                isActive("/leaderboard") && "bg-primary/10 text-primary border-b-2 border-primary rounded-b-none"
+              )}
+            >
+              <Trophy className="h-4 w-4" />
+              لوحة الشرف
+            </Button>
           </nav>
         </div>
 
@@ -194,6 +205,17 @@ export const Navbar = () => {
                   >
                     <Newspaper className="h-5 w-5" />
                     المنشورات
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => navigate("/leaderboard")}
+                    className={cn(
+                      "justify-start gap-4 h-12 text-lg",
+                      isActive("/leaderboard") && "bg-primary/10 text-primary"
+                    )}
+                  >
+                    <Trophy className="h-5 w-5" />
+                    لوحة الشرف
                   </Button>
                   {isAdmin && (
                     <Button

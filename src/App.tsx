@@ -16,6 +16,7 @@ import UpdatePassword from "./pages/UpdatePassword";
 import Posts from "./pages/Posts";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
+import Leaderboard from "./pages/Leaderboard";
 
 const queryClient = new QueryClient();
 
@@ -110,6 +111,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <Posts />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/leaderboard"
+              element={
+                <ProtectedRoute>
+                  <Leaderboard />
                 </ProtectedRoute>
               }
             />
