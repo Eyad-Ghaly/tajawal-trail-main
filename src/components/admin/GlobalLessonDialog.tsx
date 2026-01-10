@@ -23,9 +23,10 @@ import { Plus, BookOpen } from "lucide-react";
 
 interface GlobalLessonDialogProps {
     onLessonAdded: () => void;
+    teamId?: string;
 }
 
-export const GlobalLessonDialog = ({ onLessonAdded }: GlobalLessonDialogProps) => {
+export const GlobalLessonDialog = ({ onLessonAdded, teamId }: GlobalLessonDialogProps) => {
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -59,6 +60,7 @@ export const GlobalLessonDialog = ({ onLessonAdded }: GlobalLessonDialogProps) =
             english_level: newLesson.track_type === 'english' ? newLesson.english_level : null,
             order_index: newLesson.order_index,
             published: true,
+            team_id: teamId || null, // Add team_id if provided
         } as any);
 
         if (error) {

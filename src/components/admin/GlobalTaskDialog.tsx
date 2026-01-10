@@ -23,9 +23,10 @@ import { Plus, ClipboardList } from "lucide-react";
 
 interface GlobalTaskDialogProps {
     onTaskAdded: () => void;
+    teamId?: string;
 }
 
-export const GlobalTaskDialog = ({ onTaskAdded }: GlobalTaskDialogProps) => {
+export const GlobalTaskDialog = ({ onTaskAdded, teamId }: GlobalTaskDialogProps) => {
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -59,6 +60,7 @@ export const GlobalTaskDialog = ({ onTaskAdded }: GlobalTaskDialogProps) => {
             english_level: newTask.track_type === 'english' ? newTask.english_level : null,
             xp: newTask.xp,
             published: true,
+            team_id: teamId || null, // Add team_id if provided
         } as any);
 
         if (error) {
