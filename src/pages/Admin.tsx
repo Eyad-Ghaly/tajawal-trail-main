@@ -208,11 +208,11 @@ const Admin = () => {
         .order("xp_total", { ascending: false });
       setLearners((learnersData as unknown as User[]) || []);
 
-      // Load pending users
+      // Load pending users (Learners AND Team Leaders)
       const { data: pendingUsersData } = await supabase
         .from("profiles")
         .select("*")
-        .eq("role", "learner")
+        .in("role", ["learner", "team_leader"])
         .eq("status", "pending")
         .order("created_at", { ascending: false });
       setPendingUsers((pendingUsersData as unknown as User[]) || []);
