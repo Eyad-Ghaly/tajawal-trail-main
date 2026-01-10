@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, LayoutDashboard, User, Newspaper, Trophy } from "lucide-react";
+import { LogOut, LayoutDashboard, User, Newspaper, Trophy, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -30,6 +30,7 @@ export const Navbar = () => {
   const { toast } = useToast();
   const [profile, setProfile] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isTeamLeader, setIsTeamLeader] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -50,6 +51,7 @@ export const Navbar = () => {
 
       // Check if user has admin role directly from profile
       setIsAdmin(profileData?.role === 'admin');
+      setIsTeamLeader(profileData?.role === 'team_leader');
     }
   };
 
@@ -131,6 +133,19 @@ export const Navbar = () => {
               <Trophy className="h-4 w-4" />
               لوحة الشرف
             </Button>
+            {isTeamLeader && (
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/team-dashboard")}
+                className={cn(
+                  "gap-2",
+                  isActive("/team-dashboard") && "bg-primary/10 text-primary border-b-2 border-primary rounded-b-none"
+                )}
+              >
+                <Users className="h-4 w-4" />
+                فريقي
+              </Button>
+            )}
           </nav>
         </div>
 
@@ -217,6 +232,19 @@ export const Navbar = () => {
                     <Trophy className="h-5 w-5" />
                     لوحة الشرف
                   </Button>
+                  {isTeamLeader && (
+                    <Button
+                      variant="ghost"
+                      onClick={() => navigate("/team-dashboard")}
+                      className={cn(
+                        "justify-start gap-4 h-12 text-lg",
+                        isActive("/team-dashboard") && "bg-primary/10 text-primary"
+                      )}
+                    >
+                      <Users className="h-5 w-5" />
+                      فريقي
+                    </Button>
+                  )}
                   {isAdmin && (
                     <Button
                       variant="ghost"
@@ -270,7 +298,9 @@ export const Navbar = () => {
               <div className="flex items-center justify-start gap-2 p-2">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium">{profile?.full_name}</p>
-                  <p className="text-xs text-muted-foreground">{isAdmin ? "مدير" : "متعلم"}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {isAdmin ? "مدير" : isTeamLeader ? "قائد فريق" : "متعلم"}
+                  </p>
                 </div>
               </div>
               <DropdownMenuSeparator />

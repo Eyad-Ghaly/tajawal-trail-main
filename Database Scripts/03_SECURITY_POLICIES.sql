@@ -20,6 +20,11 @@ alter table daily_checkin enable row level security;
 alter table chat_messages enable row level security;
 alter table notifications enable row level security;
 alter table posts enable row level security;
+alter table teams enable row level security;
+alter table poll_options enable row level security;
+alter table poll_votes enable row level security;
+alter table post_likes enable row level security;
+alter table post_comments enable row level security;
 
 -- 2. STORAGE POLICIES
 -- Avatars
@@ -90,6 +95,22 @@ do $$ begin
   create policy "Admins can update any profile" on profiles for update using (
     auth.uid() = id OR exists (select 1 from profiles where id = auth.uid() and role = 'admin')
   );
+
+  -- Admin & Team Leader View Policy
+  drop policy if exists "Admins and Leaders can view specific profiles" on profiles;
+  create policy "Admins and Leaders can view specific profiles" on profiles
+    for select using (
+        -- User sees themselves
+        auth.uid() = id 
+        -- OR User is Admin
+        OR exists (select 1 from user_roles where user_id = auth.uid() and role = 'admin')
+        -- OR User is Team Leader viewing their own team members
+        OR exists (
+            select 1 from teams 
+            where teams.id = profiles.team_id 
+            and teams.leader_id = auth.uid()
+        )
+    );
 
   drop policy if exists "Admins can delete any profile" on profiles;
   create policy "Admins can delete any profile" on profiles for delete using (
@@ -173,4 +194,64 @@ do $$ begin
 
   drop policy if exists "Admins can manage posts" on posts;
   create policy "Admins can manage posts" on posts for all using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+end $$;
+
+-- 4. NEW TABLES POLICIES (Teams, Polls, etc.)
+do $$ begin
+  -- TEAMS
+  -- Everyone can view teams (needed to validate code)
+  drop policy if exists "Public teams are viewable" on public.teams;
+  create policy "Public teams are viewable" on public.teams for select using (true);
+
+  -- Leaders can update own team
+  drop policy if exists "Leaders can update own team" on public.teams;
+  create policy "Leaders can update own team" on public.teams for update using (auth.uid() = leader_id);
+
+  -- Leaders can insert own team
+  drop policy if exists "Leaders can insert own team" on public.teams;
+  create policy "Leaders can insert own team" on public.teams for insert with check (auth.uid() = leader_id);
+
+  -- POLL OPTIONS
+  drop policy if exists "Poll options viewable by everyone" on public.poll_options;
+  create policy "Poll options viewable by everyone" on public.poll_options for select using (true);
+  
+  drop policy if exists "Admins manage poll options" on public.poll_options;
+  create policy "Admins manage poll options" on public.poll_options for all using (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'));
+
+  -- POLL VOTES
+  drop policy if exists "Poll votes viewable by everyone" on public.poll_votes;
+  create policy "Poll votes viewable by everyone" on public.poll_votes for select using (true);
+  
+  drop policy if exists "Users can vote" on public.poll_votes;
+  create policy "Users can vote" on public.poll_votes for insert with check (auth.uid() = user_id);
+  
+  drop policy if exists "Users can remove their vote" on public.poll_votes;
+  create policy "Users can remove their vote" on public.poll_votes for delete using (auth.uid() = user_id);
+
+  -- POST LIKES
+  drop policy if exists "Post likes viewable by everyone" on public.post_likes;
+  create policy "Post likes viewable by everyone" on public.post_likes for select using (true);
+  
+  drop policy if exists "Users can like posts" on public.post_likes;
+  create policy "Users can like posts" on public.post_likes for insert with check (auth.uid() = user_id);
+  
+  drop policy if exists "Users can unlike posts" on public.post_likes;
+  create policy "Users can unlike posts" on public.post_likes for delete using (auth.uid() = user_id);
+
+  -- POST COMMENTS
+  drop policy if exists "Post comments viewable by everyone" on public.post_comments;
+  create policy "Post comments viewable by everyone" on public.post_comments for select using (true);
+  
+  drop policy if exists "Users can add comments" on public.post_comments;
+  create policy "Users can add comments" on public.post_comments for insert with check (auth.uid() = user_id);
+  
+  drop policy if exists "Users can update own comments" on public.post_comments;
+  create policy "Users can update own comments" on public.post_comments for update using (auth.uid() = user_id);
+  
+  drop policy if exists "Users can delete own comments" on public.post_comments;
+  create policy "Users can delete own comments" on public.post_comments for delete using (auth.uid() = user_id);
+  
+  drop policy if exists "Admins can delete any comment" on public.post_comments;
+  create policy "Admins can delete any comment" on public.post_comments for delete using (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'));
+
 end $$;

@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, LogIn, UserPlus, ExternalLink, KeyRound, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { Loader2, LogIn, UserPlus, ExternalLink, KeyRound, ArrowRight, Eye, EyeOff, Users, User } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { loginSchema, signupSchema, forgotPasswordSchema, validateOrThrow } from "@/lib/validations";
 
@@ -43,9 +43,13 @@ const GOVERNORATES = [
 const PLACEMENT_TEST_URL = "https://forms.google.com/your-placement-test"; // يمكن تغييره لاحقاً
 
 type AuthMode = "login" | "signup" | "forgot-password";
+type UserRole = "learner" | "team_leader";
 
 const Auth = () => {
   const [mode, setMode] = useState<AuthMode>("login");
+  const [role, setRole] = useState<UserRole>("learner");
+
+  // Form Fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -54,11 +58,25 @@ const Auth = () => {
   const [phoneCode, setPhoneCode] = useState("+20");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Team Fields
+  const [teamName, setTeamName] = useState("");
+  const [teamCode, setTeamCode] = useState("");
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (location.state?.role) {
+      setRole(location.state.role);
+      setMode("signup");
+    }
+  }, [location.state]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,6 +100,7 @@ const Auth = () => {
 
         navigate("/dashboard");
       } else if (mode === "signup") {
+        // Validate basic fields
         const validData = validateOrThrow(signupSchema, {
           email,
           fullName,
@@ -93,18 +112,40 @@ const Auth = () => {
           confirmPassword
         });
 
+        // Prepare Metadata
+        const metaData: any = {
+          full_name: validData.fullName,
+          role: role, // 'learner' or 'team_leader'
+          level: "Beginner",
+          governorate: validData.governorate,
+          membership_number: validData.membershipNumber,
+          phone_number: `${validData.phoneCode}${validData.phoneNumber}`,
+        };
+
+        // Handle Role Specific Logic
+        if (role === 'team_leader') {
+          if (!teamName.trim()) throw new Error("يرجى إدخال اسم الفريق");
+          metaData.team_name = teamName.trim();
+        }
+        else if (role === 'learner') {
+          if (teamCode.trim()) {
+            // Verify Team Code
+            const { data: team, error: teamError } = await supabase
+              .from('teams')
+              .select('id')
+              .eq('code', teamCode.trim())
+              .single();
+
+            if (teamError || !team) throw new Error("كود الفريق غير صحيح");
+            metaData.team_id = team.id;
+          }
+        }
+
         const { error } = await supabase.auth.signUp({
           email: validData.email,
           password: validData.password,
           options: {
-            data: {
-              full_name: validData.fullName,
-              role: "learner",
-              level: "Beginner",
-              governorate: validData.governorate,
-              membership_number: validData.membershipNumber,
-              phone_number: `${validData.phoneCode}${validData.phoneNumber}`,
-            },
+            data: metaData,
             emailRedirectTo: `${window.location.origin}/dashboard`,
           },
         });
@@ -113,7 +154,7 @@ const Auth = () => {
 
         toast({
           title: "تم إنشاء الحساب!",
-          description: "شكراً لتسجيلك في المنصة. حسابك معلق حالياً وسيتم مراجعته من قبل الإدارة قريباً يمكنك الواصل على الرقم 01124898339 وتجربة التسجيل بعد 5 دقائق",
+          description: "شكراً لتسجيلك في المنصة. حسابك قيد المراجعة.",
         });
 
         setMode("login");
@@ -147,7 +188,7 @@ const Auth = () => {
   const getTitle = () => {
     switch (mode) {
       case "login": return "مرحباً بعودتك! سجل دخولك للمتابعة";
-      case "signup": return "انضم إلينا وابدأ رحلة التطوير";
+      case "signup": return role === 'team_leader' ? "تسجيل قائد فريق جديد" : "تسجيل متعلم جديد";
       case "forgot-password": return "أدخل بريدك الإلكتروني لاستعادة كلمة المرور";
     }
   };
@@ -157,17 +198,13 @@ const Auth = () => {
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center ${role === 'team_leader' && mode === 'signup' ? 'bg-purple-100' : 'bg-primary/10'}`}>
               {mode === "forgot-password" ? (
                 <KeyRound className="w-10 h-10 text-primary" />
+              ) : role === 'team_leader' && mode === 'signup' ? (
+                <Users className="w-10 h-10 text-purple-600" />
               ) : (
-                <svg
-                  className="w-10 h-10 text-primary"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
-                </svg>
+                <User className="w-10 h-10 text-primary" />
               )}
             </div>
           </div>
@@ -194,6 +231,36 @@ const Auth = () => {
                     disabled={loading}
                   />
                 </div>
+
+                {role === 'team_leader' ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="teamName">اسم الفريق</Label>
+                    <Input
+                      id="teamName"
+                      type="text"
+                      placeholder="اسم فريقك (مثل: فريق النخبة)"
+                      value={teamName}
+                      onChange={(e) => setTeamName(e.target.value)}
+                      required
+                      disabled={loading}
+                      className="border-purple-200 focus-visible:ring-purple-500"
+                    />
+                    <p className="text-xs text-muted-foreground">سيتم إنشاء كود خاص بفريقك تلقائياً</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="teamCode">كود الفريق (اختياري)</Label>
+                    <Input
+                      id="teamCode"
+                      type="text"
+                      placeholder="أدخل كود الفريق إذا وجد"
+                      value={teamCode}
+                      onChange={(e) => setTeamCode(e.target.value)}
+                      disabled={loading}
+                    />
+                    <p className="text-xs text-muted-foreground">إذا لم تدخل كود، سيتم إضافتك للفريق الرئيسي</p>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="governorate">المحافظة</Label>
@@ -259,22 +326,23 @@ const Auth = () => {
                   </div>
                 </div>
 
-                {/* Placement Test Link */}
-                <div className="bg-muted/50 p-4 rounded-lg border">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    اختبار تحديد المستوى (اختياري)
-                  </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(PLACEMENT_TEST_URL, '_blank')}
-                    className="gap-2"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    خذ اختبار تحديد المستوى
-                  </Button>
-                </div>
+                {role === 'learner' && (
+                  <div className="bg-muted/50 p-4 rounded-lg border">
+                    <p className="text-sm text-muted-foreground mb-2">
+                      اختبار تحديد المستوى (اختياري)
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(PLACEMENT_TEST_URL, '_blank')}
+                      className="gap-2"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      خذ اختبار تحديد المستوى
+                    </Button>
+                  </div>
+                )}
               </>
             )}
 
@@ -413,6 +481,13 @@ const Auth = () => {
                     ? "ليس لديك حساب؟ سجل الآن"
                     : "لديك حساب بالفعل؟ سجل دخولك"}
                 </button>
+                {mode === "signup" && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    <button type="button" onClick={() => navigate('/')} className="hover:underline text-blue-500">
+                      تغيير نوع التسجيل
+                    </button>
+                  </p>
+                )}
               </div>
             )}
           </form>

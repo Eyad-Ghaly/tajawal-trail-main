@@ -17,6 +17,8 @@ import Posts from "./pages/Posts";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 import Leaderboard from "./pages/Leaderboard";
+import Landing from "./pages/Landing";
+import TeamDashboard from "./pages/TeamDashboard";
 
 const queryClient = new QueryClient();
 
@@ -53,7 +55,7 @@ const App = () => {
             <Route
               path="/"
               element={
-                session ? <Navigate to="/dashboard" replace /> : <Navigate to="/auth" replace />
+                session ? <Navigate to="/dashboard" replace /> : <Landing />
               }
             />
             <Route path="/auth" element={<Auth />} />
@@ -119,6 +121,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <Leaderboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/team-dashboard"
+              element={
+                <ProtectedRoute>
+                  <TeamDashboard />
                 </ProtectedRoute>
               }
             />

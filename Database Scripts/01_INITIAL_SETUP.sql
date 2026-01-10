@@ -14,7 +14,7 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 
 do $$ begin
-  create type app_role as enum ('admin', 'learner');
+  create type app_role as enum ('admin', 'learner', 'team_leader');
 exception when duplicate_object then null; end $$;
 
 do $$ begin
@@ -57,6 +57,7 @@ create table if not exists public.profiles (
   placement_test_url text,
   status text default 'pending',
   last_streak_date date,
+  team_id uuid, -- Added for Teams structure
   created_at timestamp with time zone default timezone('utc'::text, now()),
   updated_at timestamp with time zone default timezone('utc'::text, now())
 );
@@ -69,8 +70,25 @@ select
   full_name,
   avatar_url,
   level,
-  english_level
+  english_level,
+  team_id
 from public.profiles;
+
+-- TEAMS
+create table if not exists public.teams (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL,
+    leader_id UUID REFERENCES auth.users(id) NOT NULL,
+    code TEXT NOT NULL UNIQUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Add Foreign Key to Profiles (circular dependency handling if created together, but okay in sequence)
+-- Note: profiles.team_id references teams.id. Since profiles is created first, we can alter it here or keep reliance on alter set later.
+-- For initial setup script, clean way is:
+DO $$ BEGIN
+  ALTER TABLE public.profiles ADD CONSTRAINT profiles_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.teams(id);
+EXCEPTION WHEN undefined_table THEN NULL; WHEN duplicate_object THEN NULL; END $$;
 
 -- USER_ROLES
 create table if not exists public.user_roles (
