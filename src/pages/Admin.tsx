@@ -58,9 +58,601 @@ interface User {
   phone_number?: string;
 }
 
-// ... (Existing Interfaces) ...
+interface Task {
+  id: string;
+  title: string;
+  description: string;
+  track_type: string;
+  xp: number;
+  level: "Beginner" | "Intermediate" | "Advanced" | null;
+  english_level?: "A" | "B" | "C";
+  published: boolean;
+  created_at: string;
+}
 
-// ... (Inside TabsContent for "pending-users") ...
+interface Lesson {
+  id: string;
+  title: string;
+  description: string;
+  track_type: string;
+  level: "Beginner" | "Intermediate" | "Advanced" | null;
+  english_level?: "A" | "B" | "C";
+  published: boolean;
+  order_index: number;
+}
+
+interface Proof {
+  id: string;
+  user_id: string;
+  task_id: string;
+  submitted_at: string;
+  completion_proof: string;
+  status: string;
+  task?: Task;
+  user?: User;
+}
+
+// Helper Component for Pending User Row to manage local state
+const PendingUserCard = ({ user, onApprove, onReject }: { user: User, onApprove: (id: string, general: string, english: string) => void, onReject: (id: string) => void }) => {
+  const [generalLevel, setGeneralLevel] = useState<string>("Beginner");
+  const [englishLevel, setEnglishLevel] = useState<string>("B");
+
+  return (
+    <div className="border rounded-lg p-4 space-y-3 hover:bg-muted/50 transition-colors">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3 flex-1">
+          <Avatar>
+            <AvatarImage src={user.avatar_url || ""} />
+            <AvatarFallback className="bg-primary text-primary-foreground">
+              {user.full_name?.charAt(0)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <h4 className="font-medium">{user.full_name}</h4>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+              {user.governorate && (
+                <div className="flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {user.governorate}
+                </div>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {user.email && <div>{user.email}</div>}
+              تاريخ التسجيل: {user.created_at ? new Date(user.created_at).toLocaleDateString("ar-SA") : "-"}
+              {user.role === 'team_leader' && (
+                <Badge variant="outline" className="mr-2 border-purple-500 text-purple-500">
+                  قائد فريق
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 items-end">
+          <div className="flex gap-2">
+            <div className="w-32">
+              <label className="text-[10px] text-muted-foreground px-1">المستوى العام</label>
+              <Select value={generalLevel} onValueChange={setGeneralLevel}>
+                <SelectTrigger className="h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Beginner">مبتدئ</SelectItem>
+                  <SelectItem value="Intermediate">متوسط</SelectItem>
+                  <SelectItem value="Advanced">متقدم</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-32">
+              <label className="text-[10px] text-muted-foreground px-1">اللغة</label>
+              <Select value={englishLevel} onValueChange={setEnglishLevel}>
+                <SelectTrigger className="h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="A">مستوى A</SelectItem>
+                  <SelectItem value="B">مستوى B</SelectItem>
+                  <SelectItem value="C">مستوى C</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex gap-2 mt-1">
+            <Button
+              size="sm"
+              className="w-full bg-green-600 hover:bg-green-700"
+              onClick={() => onApprove(user.id, generalLevel, englishLevel)}
+            >
+              <UserCheck className="h-4 w-4 mr-2" />
+              قبول
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => onReject(user.id)}
+            >
+              <UserX className="h-4 w-4 mr-2" />
+              رفض
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+const Admin = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [stats, setStats] = useState({
+    totalLearners: 0,
+    avgProgress: 0,
+    totalXP: 0,
+    pendingTasks: 0,
+    pendingUsers: 0,
+  });
+  const [learners, setLearners] = useState<User[]>([]);
+  const [pendingUsers, setPendingUsers] = useState<User[]>([]);
+  const [pendingProofs, setPendingProofs] = useState<Proof[]>([]);
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      // Load approved users (learners and admins who want to test)
+      const { data: learnersData } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("status", "approved")
+        .order("xp_total", { ascending: false });
+      setLearners((learnersData as unknown as User[]) || []);
+
+      // Load pending users (Learners AND Team Leaders)
+      const { data: pendingUsersData } = await supabase
+        .from("profiles")
+        .select("*")
+        .in("role", ["learner", "team_leader"])
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+      setPendingUsers((pendingUsersData as unknown as User[]) || []);
+
+      // Load pending proofs
+      const { data: proofsData } = await supabase
+        .from("user_tasks")
+        .select(`
+          *,
+          task:tasks(*),
+          user:profiles(*)
+        `)
+        .eq("status", "submitted")
+        .order("submitted_at", { ascending: false });
+      setPendingProofs((proofsData as unknown as Proof[]) || []);
+
+      // Load lessons
+      const { data: lessonsData } = await supabase
+        .from("lessons")
+        .select("*")
+        .order("order_index");
+      setLessons((lessonsData as unknown as Lesson[]) || []);
+
+      // Load tasks
+      const { data: tasksData } = await supabase
+        .from("tasks")
+        .select("*")
+        .order("created_at", { ascending: false });
+      setTasks((tasksData as unknown as Task[]) || []);
+
+      // Calculate stats
+      const totalLearners = learnersData?.length || 0;
+      const avgProgress = totalLearners > 0
+        ? learnersData.reduce((sum, l) => sum + (l.overall_progress || 0), 0) / totalLearners
+        : 0;
+      const totalXP = learnersData?.reduce((sum, l) => sum + (l.xp_total || 0), 0) || 0;
+      const pendingTasks = proofsData?.length || 0;
+      const pendingUsersCount = pendingUsersData?.length || 0;
+
+      setStats({
+        totalLearners,
+        avgProgress,
+        totalXP,
+        pendingTasks,
+        pendingUsers: pendingUsersCount,
+      });
+    } catch (error) {
+      console.error("Error loading data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApproveProof = async (userTaskId: string, xp: number, userId: string) => {
+    try {
+      // Update user_task
+      await supabase
+        .from("user_tasks")
+        .update({
+          status: "approved",
+          xp_granted: xp,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq("id", userTaskId);
+
+      // Update user XP
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("xp_total")
+        .eq("id", userId)
+        .single();
+
+      await supabase
+        .from("profiles")
+        .update({
+          xp_total: (profile?.xp_total || 0) + xp,
+        })
+        .eq("id", userId);
+
+      toast({
+        title: "تم القبول ✅",
+        description: `تم منح ${xp} XP للمستخدم`,
+      });
+
+      loadData();
+    } catch (error) {
+      console.error("Error approving proof:", error);
+      toast({
+        title: "حدث خطأ",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRejectProof = async (userTaskId: string) => {
+    try {
+      await supabase
+        .from("user_tasks")
+        .update({
+          status: "rejected",
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq("id", userTaskId);
+
+      toast({
+        title: "تم الرفض",
+        variant: "destructive",
+      });
+
+      loadData();
+    } catch (error) {
+      console.error("Error rejecting proof:", error);
+    }
+  };
+  const handleLevelChange = async (userId: string, newLevel: "Beginner" | "Intermediate" | "Advanced") => {
+    try {
+      await supabase
+        .from("profiles")
+        .update({ level: newLevel })
+        .eq("id", userId);
+
+      toast({
+        title: "تم التحديث ✅",
+        description: `تم تغيير المستوى العام إلى ${newLevel}`,
+      });
+
+      loadData();
+    } catch (error) {
+      console.error("Error updating level:", error);
+      toast({
+        title: "حدث خطأ",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEnglishLevelChange = async (userId: string, newLevel: "A" | "B" | "C") => {
+    try {
+      await supabase
+        .from("profiles")
+        .update({ english_level: newLevel } as any)
+        .eq("id", userId);
+
+      toast({
+        title: "تم التحديث ✅",
+        description: `تم تغيير مستوى اللغة إلى ${newLevel}`,
+      });
+
+      loadData();
+    } catch (error) {
+      console.error("Error updating english level:", error);
+      toast({
+        title: "حدث خطأ",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "approved": return "bg-success text-white";
+      case "submitted": return "bg-info text-white";
+      case "rejected": return "bg-destructive text-white";
+      default: return "bg-warning text-white";
+    }
+  };
+
+  const getLevelColor = (level: string) => {
+    switch (level) {
+      case "Advanced": return "text-success";
+      case "Intermediate": return "text-info";
+      default: return "text-warning";
+    }
+  };
+
+  const handleLessonLevelChange = async (lessonId: string, newLevel: "Beginner" | "Intermediate" | "Advanced" | null) => {
+    try {
+      await supabase
+        .from("lessons")
+        .update({ level: newLevel })
+        .eq("id", lessonId);
+
+      toast({
+        title: "تم التحديث ✅",
+        description: `تم تغيير مستوى الدرس`,
+      });
+
+      loadData();
+    } catch (error) {
+      console.error("Error updating lesson level:", error);
+      toast({
+        title: "حدث خطأ",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleTaskLevelChange = async (taskId: string, newLevel: "Beginner" | "Intermediate" | "Advanced" | null) => {
+    try {
+      await supabase
+        .from("tasks")
+        .update({ level: newLevel })
+        .eq("id", taskId);
+
+      toast({
+        title: "تم التحديث ✅",
+        description: `تم تغيير مستوى المهمة`,
+      });
+
+      loadData();
+    } catch (error) {
+      console.error("Error updating task level:", error);
+      toast({
+        title: "حدث خطأ",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleLessonEnglishLevelChange = async (lessonId: string, newLevel: "A" | "B" | "C" | null) => {
+    try {
+      await supabase
+        .from("lessons")
+        .update({ english_level: newLevel } as any)
+        .eq("id", lessonId);
+
+      toast({
+        title: "تم التحديث ✅",
+        description: `تم تغيير مستوى اللغة للدرس`,
+      });
+
+      loadData();
+    } catch (error) {
+      console.error("Error updating lesson english level:", error);
+      toast({
+        title: "حدث خطأ",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleTaskEnglishLevelChange = async (taskId: string, newLevel: "A" | "B" | "C" | null) => {
+    try {
+      await supabase
+        .from("tasks")
+        .update({ english_level: newLevel } as any)
+        .eq("id", taskId);
+
+      toast({
+        title: "تم التحديث ✅",
+        description: `تم تغيير مستوى اللغة للمهمة`,
+      });
+
+      loadData();
+    } catch (error) {
+      console.error("Error updating task english level:", error);
+      toast({
+        title: "حدث خطأ",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getTrackLabel = (trackType: string) => {
+    switch (trackType) {
+      case "data": return "تحليل البيانات";
+      case "english": return "اللغة الإنجليزية";
+      case "soft": return "المهارات الحياتية";
+      default: return trackType;
+    }
+  };
+
+  const handleApproveUser = async (userId: string, generalLevel: string, englishLevel: string) => {
+    try {
+      await supabase
+        .from("profiles")
+        .update({
+          status: "approved",
+          level: generalLevel,
+          english_level: englishLevel
+        } as any)
+        .eq("id", userId);
+
+      toast({
+        title: "تم قبول المستخدم ✅",
+        description: `تم تفعيل الحساب وتحديد المستويات`,
+      });
+
+      loadData();
+    } catch (error) {
+      console.error("Error approving user:", error);
+      toast({
+        title: "حدث خطأ",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRejectUser = async (userId: string) => {
+    try {
+      await supabase
+        .from("profiles")
+        .update({ status: "rejected" })
+        .eq("id", userId);
+
+      toast({
+        title: "تم رفض المستخدم",
+        variant: "destructive",
+      });
+
+      loadData();
+    } catch (error) {
+      console.error("Error rejecting user:", error);
+      toast({
+        title: "حدث خطأ",
+        variant: "destructive",
+      });
+    }
+  };
+
+
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container py-8">
+          <div className="animate-pulse space-y-4">
+            <div className="h-32 bg-muted rounded-lg"></div>
+            <div className="h-64 bg-muted rounded-lg"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/5">
+      <Navbar />
+
+      <div className="container py-8 space-y-8">
+        {/* Header */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-l from-secondary to-primary p-8 text-white shadow-2xl">
+          <div className="relative z-10">
+            <h1 className="text-4xl font-bold mb-2">
+              لوحة الإدارة 🎯
+            </h1>
+            <p className="text-white/90 text-lg">
+              متابعة شاملة لتقدم جميع المتعلمين
+            </p>
+          </div>
+          <div className="absolute left-0 top-0 h-full w-1/3 bg-white/10 blur-3xl"></div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card className="border-none shadow-lg">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">إجمالي المتعلمين</CardTitle>
+              <Users className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-primary">{stats.totalLearners}</div>
+              <p className="text-xs text-muted-foreground mt-1">متعلم</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-lg">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">متوسط التقدم</CardTitle>
+              <TrendingUp className="h-4 w-4 text-secondary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-secondary">
+                {Math.round(stats.avgProgress)}%
+              </div>
+              <Progress value={stats.avgProgress} className="mt-2" />
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-lg">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">إجمالي XP المكتسب</CardTitle>
+              <CheckCircle2 className="h-4 w-4 text-success" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-success">{stats.totalXP}</div>
+              <p className="text-xs text-muted-foreground mt-1">نقطة</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-lg">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">قيد المراجعة</CardTitle>
+              <Clock className="h-4 w-4 text-warning" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-warning">{stats.pendingTasks}</div>
+              <p className="text-xs text-muted-foreground mt-1">مهمة</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Tabs */}
+        <Tabs defaultValue="pending-users" className="space-y-4">
+          <TabsList className="grid w-full max-w-3xl grid-cols-5">
+            <TabsTrigger value="pending-users">
+              <UserPlus className="h-4 w-4 ml-1" />
+              طلبات الانضمام
+              {stats.pendingUsers > 0 && (
+                <Badge variant="destructive" className="mr-2">
+                  {stats.pendingUsers}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="learners">المتعلمين</TabsTrigger>
+            <TabsTrigger value="proofs">
+              مراجعة الإثباتات
+              {stats.pendingTasks > 0 && (
+                <Badge variant="destructive" className="mr-2">
+                  {stats.pendingTasks}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="lessons">
+              <BookOpen className="h-4 w-4 ml-1" />
+              الدروس
+            </TabsTrigger>
+            <TabsTrigger value="tasks">
+              <ListTodo className="h-4 w-4 ml-1" />
+              المهام
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Pending Users Tab */}
           <TabsContent value="pending-users" className="space-y-4">
             <Card className="border-none shadow-lg">
               <CardHeader>
@@ -249,7 +841,7 @@ interface User {
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex items-start gap-3 flex-1">
                             <Avatar>
-                              <AvatarImage src={proof.user?.avatar_url} />
+                              <AvatarImage src={proof.user?.avatar_url || ""} />
                               <AvatarFallback className="bg-primary text-primary-foreground">
                                 {proof.user?.full_name?.charAt(0)}
                               </AvatarFallback>
