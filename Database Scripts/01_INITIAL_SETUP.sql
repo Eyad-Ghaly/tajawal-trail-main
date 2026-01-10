@@ -15,7 +15,12 @@ exception when duplicate_object then null; end $$;
 
 do $$ begin
   create type app_role as enum ('admin', 'learner', 'team_leader');
-exception when duplicate_object then null; end $$;
+exception when duplicate_object then 
+  -- If type exists, try to add new value
+  begin
+    alter type app_role add value 'team_leader';
+  exception when duplicate_object then null; end;
+end $$;
 
 do $$ begin
   create type task_status as enum ('pending', 'submitted', 'approved', 'rejected');
