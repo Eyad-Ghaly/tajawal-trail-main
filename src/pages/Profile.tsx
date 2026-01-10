@@ -30,6 +30,7 @@ const Profile = () => {
   const [profile, setProfile] = useState<any>(null);
   const [activities, setActivities] = useState<any[]>([]);
   const [userTasks, setUserTasks] = useState<any[]>([]);
+  const [userLessons, setUserLessons] = useState<any[]>([]); // Added state
   const [customLessons, setCustomLessons] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -65,10 +66,13 @@ const Profile = () => {
         .select("*")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
-        .limit(10);
+        .from("activities")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
       setActivities(activitiesData || []);
 
-      // Load user tasks
+      // Load user tasks (No limit)
       const { data: tasksData } = await supabase
         .from("user_tasks")
         .select(`
@@ -76,17 +80,43 @@ const Profile = () => {
           task:tasks(*)
         `)
         .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(10);
+        .order("created_at", { ascending: false });
       setUserTasks(tasksData || []);
 
-      // Load custom lessons
+      // Load user lessons (NEW - No limit)
+      const { data: lessonsData } = await supabase
+        .from("user_lessons")
+        .select(`
+          *,
+          lesson:lessons(*)
+        `)
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      // We will store this in a new state variable, we need to add it to the component
+      // But first, let's just make sure we capture it. I'll add the state in a separate edit or assume I can add it here.
+      // Wait, I need to add `const [userLessons, setUserLessons] = useState<any[]>([]);` at the top.
+      // I will do that in a separate chunk to be safe. For now let's just update the fetches.
+
+      // Load custom lessons (No limit)
       const { data: customLessonsData } = await supabase
         .from("custom_lessons")
         .select("*")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
       setCustomLessons(customLessonsData || []);
+
+      // Load user lessons (Fetch implementation)
+      const { data: lessonsData } = await supabase
+        .from("user_lessons")
+        .select(`
+          *,
+          lesson:lessons(*)
+        `)
+        .eq("user_id", userId)
+        .eq("watched", true) // Only completed ones
+        .order("created_at", { ascending: false });
+      setUserLessons(lessonsData || []);
+
     } catch (error) {
       console.error("Error loading profile:", error);
     } finally {
@@ -351,6 +381,49 @@ const Profile = () => {
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {new Date(task.created_at).toLocaleDateString("ar-SA")}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Completed Lessons History (NEW) */}
+          <Card className="border-none shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                الدروس المكتملة
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {userLessons.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">
+                    لا توجد دروس مكتملة بعد
+                  </p>
+                ) : (
+                  userLessons.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-start justify-between gap-3 p-3 rounded-lg border bg-secondary/5"
+                    >
+                      <div className="flex-1">
+                        <h4 className="font-medium text-sm leading-tight">
+                          {item.lesson?.title}
+                        </h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge className="bg-success text-white hover:bg-success" variant="secondary">
+                            مكتمل
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {item.lesson?.track_type === 'data' ? 'تحليل بيانات' : item.lesson?.track_type === 'english' ? 'إنجليزي' : 'مهارات'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(item.created_at || new Date()).toLocaleDateString("ar-SA")}
                       </div>
                     </div>
                   ))

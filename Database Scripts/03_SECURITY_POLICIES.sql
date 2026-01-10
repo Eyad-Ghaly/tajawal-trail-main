@@ -6,7 +6,7 @@
 
 -- 1. ENABLE RLS
 alter table profiles enable row level security;
-alter table user_roles enable row level security;
+alter table user_roles disable row level security; -- DISABLE to prevent recursion loop with profiles
 alter table badges enable row level security;
 alter table user_badges enable row level security;
 alter table lessons enable row level security;
@@ -88,37 +88,22 @@ do $$ begin
   grant all on public.user_badges to authenticated;
 
   -- Profile policies
+  -- Profile policies
   drop policy if exists "Public profiles viewable" on profiles;
   create policy "Public profiles viewable" on profiles for select using (true);
   
   drop policy if exists "Admins can update any profile" on profiles;
   create policy "Admins can update any profile" on profiles for update using (
-    auth.uid() = id OR exists (select 1 from profiles where id = auth.uid() and role = 'admin')
-  );
-
-  -- Admin & Team Leader View Policy
-  drop policy if exists "Admins and Leaders can view specific profiles" on profiles;
-  create policy "Admins and Leaders can view specific profiles" on profiles
-    for select using (
-        -- User sees themselves
-        auth.uid() = id 
-        -- OR User is Admin
-        OR exists (select 1 from user_roles where user_id = auth.uid() and role = 'admin')
-        -- OR User is Team Leader viewing their own team members
-        OR exists (
-            select 1 from teams 
-            where teams.id = profiles.team_id 
-            and teams.leader_id = auth.uid()
-        )
-    );
-
-  drop policy if exists "Admins can delete any profile" on profiles;
-  create policy "Admins can delete any profile" on profiles for delete using (
-    auth.uid() = id OR exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+    auth.uid() = id OR exists (select 1 from user_roles where user_id = auth.uid() and role = 'admin')
   );
 
   drop policy if exists "Users insert own" on profiles;
   create policy "Users insert own" on profiles for insert with check (auth.uid() = id);
+
+  drop policy if exists "Admins can delete any profile" on profiles;
+  create policy "Admins can delete any profile" on profiles for delete using (
+    exists (select 1 from user_roles where user_id = auth.uid() and role = 'admin')
+  );
 
   -- Lessons/Tasks
   drop policy if exists "Lessons viewable" on lessons;
