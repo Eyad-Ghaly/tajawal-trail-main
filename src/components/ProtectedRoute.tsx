@@ -8,12 +8,14 @@ import { Button } from "@/components/ui/button";
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
+  allowTeamLeader?: boolean;
 }
 
-export const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps) => {
+export const ProtectedRoute = ({ children, requireAdmin = false, allowTeamLeader = false }: ProtectedRouteProps) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isTeamLeader, setIsTeamLeader] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
@@ -27,6 +29,7 @@ export const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRout
         } else {
           setIsAuthenticated(false);
           setIsAdmin(false);
+          setIsTeamLeader(false);
           setStatus(null);
         }
         setLoading(false);
@@ -56,6 +59,7 @@ export const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRout
       .single();
 
     setIsAdmin(profileData?.role === 'admin');
+    setIsTeamLeader(profileData?.role === 'team_leader');
     setStatus(profileData?.status || null);
   };
 
@@ -147,8 +151,12 @@ export const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRout
     );
   }
 
-  if (requireAdmin && !isAdmin) {
-    return <Navigate to="/dashboard" replace />;
+  // Access Control Logic
+  if (requireAdmin) {
+    // If Admin required, we allow if isAdmin OR (allowTeamLeader AND isTeamLeader)
+    if (!isAdmin && !(allowTeamLeader && isTeamLeader)) {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   return <>{children}</>;

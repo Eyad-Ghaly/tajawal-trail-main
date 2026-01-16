@@ -152,7 +152,7 @@ export const Navbar = () => {
         <div className="flex items-center gap-2">
           <NotificationsDropdown />
 
-          {isAdmin && (
+          {(isAdmin || isTeamLeader) && (
             <Button
               variant="ghost"
               onClick={() => navigate("/admin")}
@@ -245,7 +245,7 @@ export const Navbar = () => {
                       فريقي
                     </Button>
                   )}
-                  {isAdmin && (
+                  {(isAdmin || isTeamLeader) && (
                     <Button
                       variant="ghost"
                       onClick={() => navigate("/admin")}
