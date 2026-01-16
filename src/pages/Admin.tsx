@@ -56,6 +56,7 @@ interface User {
   join_date: string;
   email?: string;
   phone_number?: string;
+  team_id?: string | null;
 }
 
 interface Task {
@@ -198,10 +199,29 @@ const Admin = () => {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [adminTeamId, setAdminTeamId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
+    checkAdminTeam();
     loadData();
   }, []);
+
+  const checkAdminTeam = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: rawProfile } = await supabase
+        .from('profiles')
+        .select('team_id, role')
+        .eq('id', user.id)
+        .single();
+
+      const profile = rawProfile as unknown as { team_id: string | null, role: string };
+
+      if (profile?.role === 'team_leader' && profile?.team_id) {
+        setAdminTeamId(profile.team_id);
+      }
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -907,7 +927,7 @@ const Admin = () => {
                     تحديث الدروس الحالية أو إضافة دروس جديدة للمسارات الأساسية
                   </CardDescription>
                 </div>
-                <GlobalLessonDialog onLessonAdded={loadData} />
+                <GlobalLessonDialog onLessonAdded={loadData} teamId={adminTeamId} />
               </CardHeader>
               <CardContent>
                 <Table>
@@ -987,7 +1007,7 @@ const Admin = () => {
                     تحديث المهام الحالية أو إضافة مهام جديدة للمسارات الأساسية
                   </CardDescription>
                 </div>
-                <GlobalTaskDialog onTaskAdded={loadData} />
+                <GlobalTaskDialog onTaskAdded={loadData} teamId={adminTeamId} />
               </CardHeader>
               <CardContent>
                 <Table>
