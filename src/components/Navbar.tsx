@@ -155,14 +155,14 @@ export const Navbar = () => {
           {(isAdmin || isTeamLeader) && (
             <Button
               variant="ghost"
-              onClick={() => navigate("/admin")}
+              onClick={() => navigate(isTeamLeader ? "/team-dashboard" : "/admin")}
               className={cn(
                 "hidden md:flex gap-2",
-                isActive("/admin") && "bg-primary/10 text-primary border-b-2 border-primary rounded-b-none"
+                isActive(isTeamLeader ? "/team-dashboard" : "/admin") && "bg-primary/10 text-primary border-b-2 border-primary rounded-b-none"
               )}
             >
               <LayoutDashboard className="h-4 w-4" />
-              لوحة الإدارة
+              {isTeamLeader ? "إدارة الفريق" : "لوحة الإدارة"}
             </Button>
           )}
 
@@ -248,14 +248,14 @@ export const Navbar = () => {
                   {(isAdmin || isTeamLeader) && (
                     <Button
                       variant="ghost"
-                      onClick={() => navigate("/admin")}
+                      onClick={() => navigate(isTeamLeader ? "/team-dashboard" : "/admin")}
                       className={cn(
                         "justify-start gap-4 h-12 text-lg",
-                        isActive("/admin") && "bg-primary/10 text-primary"
+                        isActive(isTeamLeader ? "/team-dashboard" : "/admin") && "bg-primary/10 text-primary"
                       )}
                     >
                       <LayoutDashboard className="h-5 w-5" />
-                      لوحة الإدارة
+                      {isTeamLeader ? "إدارة الفريق" : "لوحة الإدارة"}
                     </Button>
                   )}
                   <DropdownMenuSeparator />

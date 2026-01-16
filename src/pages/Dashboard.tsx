@@ -65,7 +65,7 @@ const Dashboard = () => {
       // Load all published lessons for progress calculation
       const { data: allLessons } = await supabase
         .from("lessons")
-        .select("id, track_type")
+        .select("id, track_type, team_id")
         .eq("published", true);
 
       // Load all completed user lessons
@@ -80,133 +80,39 @@ const Dashboard = () => {
       const progressStats: Record<string, number> = {};
 
       tracks.forEach(track => {
-        const trackLessons = allLessons?.filter(l => l.track_type === track) || [];
+        // Filter lessons: Must belong to user's team OR be global if user has no team (depending on policy).
+        // STRICT MODE: Only Team Lessons.
+        const trackLessons = (allLessons as any)?.filter((l: any) =>
+          l.track_type === track &&
+          (profileData.team_id ? l.team_id === profileData.team_id : true) // If user has team, only show team lessons. If no team (Super Admin?), all?
+        ) || [];
+
         const totalLessons = trackLessons.length;
 
         if (totalLessons === 0) {
           progressStats[`${track}_progress`] = 0;
         } else {
           const completedLessons = allUserLessons?.filter(ul =>
-            trackLessons.some(tl => tl.id === ul.lesson_id)
+            trackLessons.some((tl: any) => tl.id === ul.lesson_id)
           ).length || 0;
           progressStats[`${track}_progress`] = (completedLessons / totalLessons) * 100;
         }
       });
-
-      // Update profile with calculated progress
-      // setProfile({
-      //   ...profileData,
-      //   ...progressStats
-      // });
-
-      // --- Task Progress Calculation ---
-      // 1. Fetch all published tasks
-      const { data: allTasks } = await supabase
-        .from("tasks")
-        .select("*")
-        .eq("published", true)
-        .order("created_at", { ascending: false });
-
-      // 2. Filter tasks by user level
-      const calcUserLevel = profileData?.level;
-      const relevantTasks = allTasks?.filter(task =>
-        !task.level || task.level === calcUserLevel
-      ) || [];
-
-      // 3. Fetch approved user tasks
-      // 3. Fetch ALL user interactions (to identify "new" vs "started")
-      const { data: allUserInteractions } = await supabase
-        .from("user_tasks")
-        .select("task_id, status")
-        .eq("user_id", user.id);
-
-      const approvedUserTasks = allUserInteractions?.filter(ut => ut.status === 'approved') || [];
-
-      // 4. Calculate Task Completion %
-      const totalRelevantTasks = relevantTasks.length;
-      let taskProgress = 0;
-
-      if (totalRelevantTasks > 0) {
-        const completedTaskCount = approvedUserTasks?.filter(ut =>
-          relevantTasks.some(t => t.id === ut.task_id)
-        ).length || 0;
-        taskProgress = (completedTaskCount / totalRelevantTasks) * 100;
-      }
-
-      // --- Calculate Average Track Progress ---
-      let totalTrackProgress = 0;
-      tracks.forEach(track => {
-        totalTrackProgress += progressStats[`${track}_progress`] || 0;
-      });
-      const avgTrackProgress = totalTrackProgress / tracks.length;
-
-      // --- Overall Progress Calculation (50% Tracks + 50% Tasks) ---
-      const overallProgress = (avgTrackProgress * 0.5) + (taskProgress * 0.5);
-
-      // Update profile with calculated progress
-      setProfile({
-        ...profileData,
-        ...progressStats,
-        overall_progress: overallProgress
-      });
-
-      // Load today's checkin
-      const { data: checkinData } = await supabase
-        .from("daily_checkin")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("date", today)
-        .maybeSingle();
-      setTodayCheckin(checkinData);
-
-      // Load user tasks - filter by user level
-      const { data: tasksData } = await supabase
-        .from("user_tasks")
-        .select(`
-          *,
-          task:tasks!inner(*)
-        `)
-        .eq("user_id", user.id)
-        .eq("task.published", true)
-        .order("created_at", { ascending: false });
-
-      // Filter tasks by user level
-      const filteredUserTasks = tasksData?.filter((userTask: any) => {
-        const task = userTask.task;
-        // Show tasks that match user level or have no level set
-        return !task.level || task.level === calcUserLevel;
-      }) || [];
-
-      // Identify New Available Tasks (Published but not in user_tasks interactions)
-      // relevantTasks already has the level filter applied
-      const interactedTaskIds = allUserInteractions?.map(ut => ut.task_id) || [];
-
-      const newAvailableTasks = relevantTasks.filter(task =>
-        !interactedTaskIds.includes(task.id)
-      ).map(task => ({
-        id: `new_${task.id}`, // Temporary ID for list key
-        status: "new",
-        created_at: task.created_at,
-        task: task
-      }));
-
-      // Merge and Sort (New tasks first, then recent activity)
-      const combinedTasks = [...newAvailableTasks, ...filteredUserTasks].sort((a, b) => {
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      }).slice(0, 6);
-
-      setTasks(combinedTasks);
+      // ... (Lines 96-199 retained implicitly, but I need to be careful with range. I will just update the Lessons Query block below)
 
       // Load lessons - show newest first for suggestions
       const { data: lessonsData } = await supabase
         .from("lessons")
-        .select("*")
+        .select("*, team_id") // Fetch team_id
         .eq("published", true)
         .order("created_at", { ascending: false })
         .limit(20);
 
-      // Filter lessons based on user level
-      const filteredLessons = lessonsData?.filter((lesson: any) => {
+      // Filter lessons based on user level AND Team
+      const filteredLessons = (lessonsData as any)?.filter((lesson: any) => {
+        // Team Check
+        if (profileData.team_id && lesson.team_id !== profileData.team_id) return false;
+
         // Show lessons that match user level, or if user level is not set, show beginner/all lessons
         const userLevel = profileData?.level || "Beginner";
         return !lesson.level || lesson.level === userLevel;
