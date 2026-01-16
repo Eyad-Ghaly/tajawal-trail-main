@@ -65,7 +65,7 @@ const Dashboard = () => {
       // Load all published lessons for progress calculation
       const { data: allLessons } = await supabase
         .from("lessons")
-        .select("id, track_type, team_id")
+        .select("id, track_type, team_id") // Query matches usage
         .eq("published", true);
 
       // Load all completed user lessons
@@ -80,11 +80,10 @@ const Dashboard = () => {
       const progressStats: Record<string, number> = {};
 
       tracks.forEach(track => {
-        // Filter lessons: Must belong to user's team OR be global if user has no team (depending on policy).
-        // STRICT MODE: Only Team Lessons.
-        const trackLessons = (allLessons as any)?.filter((l: any) =>
+        // Safe cast for filtering
+        const trackLessons = (allLessons as any[])?.filter(l =>
           l.track_type === track &&
-          (profileData.team_id ? l.team_id === profileData.team_id : true) // If user has team, only show team lessons. If no team (Super Admin?), all?
+          ((profileData as any)?.team_id ? l.team_id === (profileData as any)?.team_id : true)
         ) || [];
 
         const totalLessons = trackLessons.length;
@@ -93,7 +92,7 @@ const Dashboard = () => {
           progressStats[`${track}_progress`] = 0;
         } else {
           const completedLessons = allUserLessons?.filter(ul =>
-            trackLessons.some((tl: any) => tl.id === ul.lesson_id)
+            trackLessons.some(tl => tl.id === ul.lesson_id)
           ).length || 0;
           progressStats[`${track}_progress`] = (completedLessons / totalLessons) * 100;
         }
@@ -109,12 +108,12 @@ const Dashboard = () => {
         .limit(20);
 
       // Filter lessons based on user level AND Team
-      const filteredLessons = (lessonsData as any)?.filter((lesson: any) => {
+      const filteredLessons = (lessonsData as any[])?.filter((lesson: any) => {
         // Team Check
-        if (profileData.team_id && lesson.team_id !== profileData.team_id) return false;
+        if ((profileData as any)?.team_id && lesson.team_id !== (profileData as any)?.team_id) return false;
 
         // Show lessons that match user level, or if user level is not set, show beginner/all lessons
-        const userLevel = profileData?.level || "Beginner";
+        const userLevel = (profileData as any)?.level || "Beginner";
         return !lesson.level || lesson.level === userLevel;
       }).slice(0, 4) || [];
       setLessons(filteredLessons);

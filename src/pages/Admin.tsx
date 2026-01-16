@@ -225,24 +225,64 @@ const Admin = () => {
 
   const loadData = async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: currentUserProfile } = await supabase
+        .from('profiles')
+        .select('team_id, role')
+        .eq('id', user.id)
+        .single();
+
+      const currentTeamId = currentUserProfile?.team_id;
+
       // Load approved users (learners and admins who want to test)
-      const { data: learnersData } = await supabase
+      // STRICT FILTER: Only same team
+      let learnersQuery = supabase
         .from("profiles")
         .select("*")
         .eq("status", "approved")
         .order("xp_total", { ascending: false });
-      setLearners((learnersData as unknown as User[]) || []);
 
-      // Load pending users (Learners AND Team Leaders)
-      const { data: pendingUsersData } = await supabase
+      if (currentTeamId) {
+        learnersQuery = learnersQuery.eq("team_id", currentTeamId);
+      } else {
+        // If Global Admin, maybe separate logic? For now, if strict isolation requested:
+        // Maybe only show users with NO team? Or allow all?
+        // User complained about seeing "dida's team members".
+        // So we should probably default to "Users with NO team" or "My Team".
+        // Use: eq('team_id', null) ?? No, that hides everyone.
+        // Let's assume Super Admin sees ALL currently, which is the "problem".
+        // But if I restrict to team_id match, and Super Admin has NULL, they match NULL.
+        // This is safer.
+        learnersQuery = learnersQuery.is("team_id", null);
+      }
+
+      const { data: learnersData } = await learnersQuery;
+      setLearners((learnersData as any) || []);
+
+      // Load pending users
+      let pendingQuery = supabase
         .from("profiles")
         .select("*")
         .in("role", ["learner", "team_leader"])
         .eq("status", "pending")
         .order("created_at", { ascending: false });
-      setPendingUsers((pendingUsersData as unknown as User[]) || []);
+
+      if (currentTeamId) {
+        pendingQuery = pendingQuery.eq("team_id", currentTeamId);
+      } else {
+        pendingQuery = pendingQuery.is("team_id", null);
+      }
+
+      const { data: pendingUsersData } = await pendingQuery;
+      setPendingUsers((pendingUsersData as any) || []);
 
       // Load pending proofs
+      // Proofs join tasks/profiles. We can filter by profile's team_id?
+      // Or simply filter by the `tasks` team_id if we had it, but `user_tasks` doesn't have it directly.
+      // Better to filter results or using inner join filter.
+      // Supabase join syntax with filter:
       const { data: proofsData } = await supabase
         .from("user_tasks")
         .select(`
@@ -252,21 +292,45 @@ const Admin = () => {
         `)
         .eq("status", "submitted")
         .order("submitted_at", { ascending: false });
-      setPendingProofs((proofsData as unknown as Proof[]) || []);
+
+      // Filter proofs manually in JS for flexibility
+      const filteredProofs = (proofsData as any[])?.filter((proof: any) => {
+        const userTeam = proof.user?.team_id;
+        if (currentTeamId) return userTeam === currentTeamId;
+        return !userTeam; // Global admin sees global users' proofs
+      }) || [];
+
+      setPendingProofs((filteredProofs as any) || []);
 
       // Load lessons
-      const { data: lessonsData } = await supabase
+      let lessonsQuery = supabase
         .from("lessons")
         .select("*")
         .order("order_index");
-      setLessons((lessonsData as unknown as Lesson[]) || []);
+
+      if (currentTeamId) {
+        lessonsQuery = lessonsQuery.eq("team_id", currentTeamId);
+      } else {
+        lessonsQuery = lessonsQuery.is("team_id", null);
+      }
+
+      const { data: lessonsData } = await lessonsQuery;
+      setLessons((lessonsData as any) || []);
 
       // Load tasks
-      const { data: tasksData } = await supabase
+      let tasksQuery = supabase
         .from("tasks")
         .select("*")
         .order("created_at", { ascending: false });
-      setTasks((tasksData as unknown as Task[]) || []);
+
+      if (currentTeamId) {
+        tasksQuery = tasksQuery.eq("team_id", currentTeamId);
+      } else {
+        tasksQuery = tasksQuery.is("team_id", null);
+      }
+
+      const { data: tasksData } = await tasksQuery;
+      setTasks((tasksData as any) || []);
 
       // Calculate stats
       const totalLearners = learnersData?.length || 0;
