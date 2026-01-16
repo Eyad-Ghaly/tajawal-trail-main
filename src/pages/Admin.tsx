@@ -215,10 +215,14 @@ const Admin = () => {
         .eq('id', user.id)
         .single();
 
-      const profile = rawProfile as unknown as { team_id: string | null, role: string };
+      const profile = rawProfile as any;
 
-      if (profile?.role === 'team_leader' && profile?.team_id) {
+      // Logic: If user has a team, we should likely scope their "Add" actions to that team.
+      // This prevents "Admin with Team" from creating Global Content they can't see.
+      if (profile?.team_id) {
         setAdminTeamId(profile.team_id);
+      } else {
+        setAdminTeamId(undefined);
       }
     }
   };
@@ -234,11 +238,13 @@ const Admin = () => {
         .eq('id', user.id)
         .single();
 
-      const currentTeamId = currentUserProfile?.team_id;
+      const currentTeamId = (currentUserProfile as any)?.team_id;
 
       // Load approved users (learners and admins who want to test)
       // STRICT FILTER: Only same team
-      let learnersQuery = supabase
+      // Load approved users (learners and admins who want to test)
+      // STRICT FILTER: Only same team
+      let learnersQuery: any = supabase
         .from("profiles")
         .select("*")
         .eq("status", "approved")
@@ -247,14 +253,7 @@ const Admin = () => {
       if (currentTeamId) {
         learnersQuery = learnersQuery.eq("team_id", currentTeamId);
       } else {
-        // If Global Admin, maybe separate logic? For now, if strict isolation requested:
-        // Maybe only show users with NO team? Or allow all?
-        // User complained about seeing "dida's team members".
-        // So we should probably default to "Users with NO team" or "My Team".
-        // Use: eq('team_id', null) ?? No, that hides everyone.
-        // Let's assume Super Admin sees ALL currently, which is the "problem".
-        // But if I restrict to team_id match, and Super Admin has NULL, they match NULL.
-        // This is safer.
+        // If Global Admin, strictly show users with NO team (or hide all if strict)
         learnersQuery = learnersQuery.is("team_id", null);
       }
 
@@ -262,7 +261,7 @@ const Admin = () => {
       setLearners((learnersData as any) || []);
 
       // Load pending users
-      let pendingQuery = supabase
+      let pendingQuery: any = supabase
         .from("profiles")
         .select("*")
         .in("role", ["learner", "team_leader"])
@@ -279,10 +278,6 @@ const Admin = () => {
       setPendingUsers((pendingUsersData as any) || []);
 
       // Load pending proofs
-      // Proofs join tasks/profiles. We can filter by profile's team_id?
-      // Or simply filter by the `tasks` team_id if we had it, but `user_tasks` doesn't have it directly.
-      // Better to filter results or using inner join filter.
-      // Supabase join syntax with filter:
       const { data: proofsData } = await supabase
         .from("user_tasks")
         .select(`
@@ -303,7 +298,7 @@ const Admin = () => {
       setPendingProofs((filteredProofs as any) || []);
 
       // Load lessons
-      let lessonsQuery = supabase
+      let lessonsQuery: any = supabase
         .from("lessons")
         .select("*")
         .order("order_index");
@@ -318,7 +313,7 @@ const Admin = () => {
       setLessons((lessonsData as any) || []);
 
       // Load tasks
-      let tasksQuery = supabase
+      let tasksQuery: any = supabase
         .from("tasks")
         .select("*")
         .order("created_at", { ascending: false });
