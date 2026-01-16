@@ -78,7 +78,8 @@ const Posts = () => {
 
     useEffect(() => {
         checkUser();
-        loadPosts();
+        checkUser();
+        // loadPosts(); // Called inside checkUser now to ensure profile is loaded
     }, []);
 
     const checkUser = async () => {
@@ -92,12 +93,17 @@ const Posts = () => {
 
             setProfile(profile);
             setIsAdmin(profile?.role === 'admin');
+
+            // Only load posts after we have the profile (and team_id)
+            if (profile) {
+                loadPosts(profile.team_id, profile.role === 'admin');
+            }
         }
     };
 
-    const loadPosts = async () => {
+    const loadPosts = async (userTeamId: string | null, userIsAdmin: boolean) => {
         try {
-            const { data, error } = await supabase
+            let query = supabase
                 .from("posts" as any)
                 .select(`
                     *,
@@ -117,6 +123,13 @@ const Posts = () => {
                     )
                 `)
                 .order("created_at", { ascending: false });
+
+            // Frontend filtering as a secondary check (RLS is primary)
+            // If strict RLS is active, this query will just return what's allowed.
+            // But good to be explicit for "Developer Admin" logic if we need it.
+            // For now, reliance on RLS is key, but let's confirm the query runs.
+
+            const { data, error } = await query;
 
             if (error) throw error;
 
@@ -218,7 +231,8 @@ const Posts = () => {
                     image_url: imageUrl,
                     video_url: videoUrl,
                     user_id: profile.id,
-                    type: postType
+                    type: postType,
+                    team_id: profile.team_id
                 })
                 .select()
                 .single();
@@ -574,10 +588,10 @@ const Posts = () => {
                                                                 onClick={() => handleVote(post, option.id)}
                                                                 disabled={hasVoted}
                                                                 className={`w-full text-right p-3 rounded-md border transition-all ${hasVoted
-                                                                        ? isSelected
-                                                                            ? "border-primary bg-primary/10"
-                                                                            : "border-transparent bg-muted/50"
-                                                                        : "border-muted hover:border-primary/50 hover:bg-muted"
+                                                                    ? isSelected
+                                                                        ? "border-primary bg-primary/10"
+                                                                        : "border-transparent bg-muted/50"
+                                                                    : "border-muted hover:border-primary/50 hover:bg-muted"
                                                                     }`}
                                                             >
                                                                 <div className="flex justify-between mb-1">
