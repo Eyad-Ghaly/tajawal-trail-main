@@ -243,7 +243,6 @@ const Admin = () => {
       // Load approved users (learners and admins who want to test)
       // STRICT FILTER: Only same team
       // Load approved users (learners and admins who want to test)
-      // STRICT FILTER: Only same team
       let learnersQuery: any = supabase
         .from("profiles")
         .select("*")
@@ -252,15 +251,13 @@ const Admin = () => {
 
       if (currentTeamId) {
         learnersQuery = learnersQuery.eq("team_id", currentTeamId);
-      } else {
-        // If Global Admin, strictly show users with NO team (or hide all if strict)
-        learnersQuery = learnersQuery.is("team_id", null);
       }
+      // If Global Admin (no currentTeamId), we show everyone (Full View)
 
       const { data: learnersData } = await learnersQuery;
       setLearners((learnersData as any) || []);
 
-      // Load pending users
+      // Load pending approvals
       let pendingQuery: any = supabase
         .from("profiles")
         .select("*")
@@ -270,9 +267,8 @@ const Admin = () => {
 
       if (currentTeamId) {
         pendingQuery = pendingQuery.eq("team_id", currentTeamId);
-      } else {
-        pendingQuery = pendingQuery.is("team_id", null);
       }
+      // If Global Admin, show all pending requests from any team or no team
 
       const { data: pendingUsersData } = await pendingQuery;
       setPendingUsers((pendingUsersData as any) || []);

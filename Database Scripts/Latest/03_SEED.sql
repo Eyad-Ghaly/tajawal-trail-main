@@ -31,12 +31,39 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 3. INSTRUCTIONS
-/*
-To create your First Super Admin manually:
-1. Sign up a user via the App.
-2. Run this SQL:
-   UPDATE public.profiles 
-   SET role = 'admin', status = 'approved', team_id = NULL 
-   WHERE email = 'YOUR_EMAIL@gmail.com';
-*/
+-- 3. FORCE ROLES (Run this to fix your accounts)
+
+-- A. Fix Super Admin (You)
+-- Sets role to 'admin' and ensures NO team (Global view)
+UPDATE public.profiles 
+SET role = 'admin', status = 'approved', team_id = NULL 
+WHERE email ILIKE 'eiadmokhtar67@gmail.com';
+
+-- B. Fix Team Leader (dida@erc.com)
+-- Sets role to 'team_leader', approves them, and ensures they have a team.
+DO $$
+DECLARE
+  dida_id uuid;
+  dida_team_id uuid;
+BEGIN
+  -- Get Dida's ID (Case Insensitive)
+  SELECT id INTO dida_id FROM public.profiles WHERE email ILIKE 'dida@erc.com';
+
+  IF dida_id IS NOT NULL THEN
+    -- 1. Update Profile Role
+    UPDATE public.profiles SET role = 'team_leader', status = 'approved' WHERE id = dida_id;
+
+    -- 2. Check or Create Team
+    SELECT id INTO dida_team_id FROM public.teams WHERE leader_id = dida_id LIMIT 1;
+    
+    IF dida_team_id IS NULL THEN
+        -- Create new team for Dida
+        INSERT INTO public.teams (name, leader_id, code)
+        VALUES ('فريق Dida', dida_id, 'DIDA2025')
+        RETURNING id INTO dida_team_id;
+    END IF;
+
+    -- 3. Link Dida to their Team
+    UPDATE public.profiles SET team_id = dida_team_id WHERE id = dida_id;
+  END IF;
+END $$;

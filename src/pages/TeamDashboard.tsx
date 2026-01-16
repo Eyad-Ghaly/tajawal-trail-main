@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GlobalLessonDialog } from "@/components/admin/GlobalLessonDialog";
 import { GlobalTaskDialog } from "@/components/admin/GlobalTaskDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const TeamDashboard = () => {
     const [team, setTeam] = useState<any>(null);
@@ -46,37 +47,37 @@ const TeamDashboard = () => {
 
             if (teamData) {
                 // Fetch Approved Members
-                const { data: membersData } = await supabase
-                    .from("profiles")
+                let membersQuery: any = (supabase.from("profiles") as any)
                     .select("*")
                     .eq("team_id", teamData.id)
                     .eq("status", "approved")
                     .order("xp_total", { ascending: false });
+                const { data: membersData } = await membersQuery;
                 setMembers(membersData || []);
 
                 // Fetch Pending Members (NEW)
-                const { data: pendingData } = await supabase
-                    .from("profiles")
+                let pendingQuery: any = (supabase.from("profiles") as any)
                     .select("*")
                     .eq("team_id", teamData.id)
                     .eq("status", "pending")
                     .order("created_at", { ascending: false });
+                const { data: pendingData } = await pendingQuery;
                 setPendingMembers(pendingData || []);
 
                 // Fetch Team Lessons (NEW)
-                const { data: lessonsData } = await supabase
-                    .from("lessons")
+                let lessonsQuery: any = (supabase.from("lessons") as any)
                     .select("*")
                     .eq("team_id", teamData.id)
                     .order("created_at", { ascending: false });
+                const { data: lessonsData } = await lessonsQuery;
                 setTeamLessons(lessonsData || []);
 
                 // Fetch Team Tasks (NEW)
-                const { data: tasksData } = await supabase
-                    .from("tasks")
+                let tasksQuery: any = (supabase.from("tasks") as any)
                     .select("*")
                     .eq("team_id", teamData.id)
                     .order("created_at", { ascending: false });
+                const { data: tasksData } = await tasksQuery;
                 setTeamTasks(tasksData || []);
             }
 
@@ -130,6 +131,46 @@ const TeamDashboard = () => {
         } catch (error) {
             console.error(error);
             toast({ title: "حدث خطأ", variant: "destructive" });
+        }
+    };
+
+
+    const getTrackLabel = (type: string) => {
+        switch (type) {
+            case 'technical': return 'المسار التقني';
+            case 'english': return 'اللغة الإنجليزية';
+            case 'soft-skills': return 'Soft skills';
+            default: return type;
+        }
+    };
+
+    const handleLevelChange = async (userId: string, level: string) => {
+        try {
+            const { error } = await supabase
+                .from("profiles")
+                .update({ level } as any)
+                .eq("id", userId);
+            if (error) throw error;
+            toast({ title: "تم تحديث المستوى" });
+            loadTeamData();
+        } catch (error) {
+            console.error(error);
+            toast({ title: "خطأ في التحديث", variant: "destructive" });
+        }
+    };
+
+    const handleEnglishLevelChange = async (userId: string, english_level: string) => {
+        try {
+            const { error } = await supabase
+                .from("profiles")
+                .update({ english_level } as any)
+                .eq("id", userId);
+            if (error) throw error;
+            toast({ title: "تم تحديث مستوى الإنجليزية" });
+            loadTeamData();
+        } catch (error) {
+            console.error(error);
+            toast({ title: "خطأ في التحديث", variant: "destructive" });
         }
     };
 
@@ -281,7 +322,35 @@ const TeamDashboard = () => {
                                                                 {member.full_name}
                                                             </TableCell>
                                                             <TableCell>
-                                                                <Badge variant="outline">{member.level || "Beginner"}</Badge>
+                                                                <div className="flex flex-col gap-2">
+                                                                    <Select
+                                                                        value={member.level || "Beginner"}
+                                                                        onValueChange={(value) => handleLevelChange(member.id, value)}
+                                                                    >
+                                                                        <SelectTrigger className="w-28 h-8">
+                                                                            <SelectValue />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            <SelectItem value="Beginner">مبتدئ</SelectItem>
+                                                                            <SelectItem value="Intermediate">متوسط</SelectItem>
+                                                                            <SelectItem value="Advanced">متقدم</SelectItem>
+                                                                        </SelectContent>
+                                                                    </Select>
+
+                                                                    <Select
+                                                                        value={member.english_level || "B"}
+                                                                        onValueChange={(value) => handleEnglishLevelChange(member.id, value)}
+                                                                    >
+                                                                        <SelectTrigger className="w-28 h-8">
+                                                                            <SelectValue />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            <SelectItem value="A">إنجليزي: A</SelectItem>
+                                                                            <SelectItem value="B">إنجليزي: B</SelectItem>
+                                                                            <SelectItem value="C">إنجليزي: C</SelectItem>
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </div>
                                                             </TableCell>
                                                             <TableCell>
                                                                 <div className="flex items-center gap-2">
@@ -389,7 +458,7 @@ const TeamDashboard = () => {
                                                                 </div>
                                                             </TableCell>
                                                             <TableCell>
-                                                                <Badge variant="outline">{lesson.track_type}</Badge>
+                                                                <Badge variant="outline">{getTrackLabel(lesson.track_type)}</Badge>
                                                             </TableCell>
                                                             <TableCell className="text-muted-foreground">
                                                                 {new Date(lesson.created_at).toLocaleDateString("ar-EG")}
@@ -438,7 +507,7 @@ const TeamDashboard = () => {
                                                                 </div>
                                                             </TableCell>
                                                             <TableCell>
-                                                                <Badge variant="outline">{task.track_type}</Badge>
+                                                                <Badge variant="outline">{getTrackLabel(task.track_type)}</Badge>
                                                             </TableCell>
                                                             <TableCell className="font-bold text-success">
                                                                 {task.xp} XP
